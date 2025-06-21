@@ -109,59 +109,183 @@ export default function Home() {
         </div>
       </section>
 
-      {/* SMS Preview Section */}
+      {/* Interactive SMS Demo Section */}
       <section className="py-16 bg-background" id="demo">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">See It In Action</h2>
-            <p className="text-muted-foreground">Here's exactly what you'll receive on your phone</p>
+            <p className="text-muted-foreground">Experience the full Text4Quiz conversation flow</p>
           </div>
           
-          <div className="max-w-sm mx-auto">
-            <div className="phone-mockup rounded-3xl p-2 shadow-xl">
-              <div className="bg-background rounded-2xl p-4 h-96 flex flex-col">
-                <div className="flex-grow space-y-4">
-                  {/* Daily Question */}
-                  <div className="bg-muted rounded-2xl p-4 max-w-xs sms-bubble">
-                    <div className="text-sm font-medium text-foreground mb-2">Text4Quiz Daily</div>
-                    <div className="text-sm text-muted-foreground mb-3">
-                      🧠 Question #47: Which planet in our solar system has the most moons?
-                      <br /><br />
-                      A) Jupiter<br />
-                      B) Saturn<br />
-                      C) Uranus<br />
-                      D) Neptune
-                      <br /><br />
-                      Reply with A, B, C, or D
-                    </div>
-                    <div className="text-xs text-muted-foreground">9:00 AM</div>
-                  </div>
-                  
-                  {/* User Response */}
-                  <div className="flex justify-end">
-                    <div className="bg-primary text-primary-foreground rounded-2xl p-4 max-w-xs sms-bubble">
-                      <div className="text-sm">B</div>
-                      <div className="text-xs text-primary-foreground/70 mt-1">9:02 AM</div>
-                    </div>
-                  </div>
-                  
-                  {/* Response Feedback */}
-                  <div className="bg-muted rounded-2xl p-4 max-w-xs sms-bubble">
-                    <div className="text-sm text-muted-foreground">
-                      🎉 Correct! Saturn has 146 known moons, making it the planet with the most moons in our solar system.
-                      <br /><br />
-                      Streak: 13 days 🔥<br />
-                      Score: +10 points
-                    </div>
-                    <div className="text-xs text-muted-foreground mt-2">9:02 AM</div>
+          <div className="grid lg:grid-cols-2 gap-12 items-center">
+            {/* Phone Mockup */}
+            <div className="max-w-sm mx-auto lg:mx-0">
+              <div className="phone-mockup rounded-3xl p-3 shadow-2xl">
+                {/* Phone Header */}
+                <div className="bg-gray-900 rounded-t-2xl px-4 py-2 flex items-center justify-between">
+                  <div className="text-white text-sm font-medium">Messages</div>
+                  <div className="flex space-x-1">
+                    <div className="w-3 h-3 bg-red-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-yellow-500 rounded-full"></div>
+                    <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   </div>
                 </div>
                 
-                <div className="border-t pt-4 mt-4">
-                  <div className="bg-muted rounded-full px-4 py-2 text-sm text-muted-foreground">
-                    Text "SCORE" for stats...
+                {/* Message Thread */}
+                <div className="bg-gray-100 rounded-b-2xl p-4 h-96 flex flex-col overflow-hidden">
+                  <div className="flex-grow space-y-3 overflow-y-auto">
+                    {/* Contact Header */}
+                    <div className="text-center border-b pb-2 mb-4">
+                      <div className="text-sm font-semibold text-gray-800">Text4Quiz</div>
+                      <div className="text-xs text-gray-500">+1 (555) 123-QUIZ</div>
+                    </div>
+                    
+                    {/* Daily Question */}
+                    <div className="flex items-start space-x-2">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        T4Q
+                      </div>
+                      <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
+                        <div className="text-xs text-gray-600 mb-1">Today 9:00 AM</div>
+                        <div className="text-sm text-gray-800">
+                          🧠 <strong>Question #47:</strong> Which planet in our solar system has the most moons?
+                          <br /><br />
+                          <strong>A)</strong> Jupiter<br />
+                          <strong>B)</strong> Saturn<br />
+                          <strong>C)</strong> Uranus<br />
+                          <strong>D)</strong> Neptune
+                          <br /><br />
+                          Reply with A, B, C, or D
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* User Response */}
+                    <div className="flex justify-end">
+                      <div className="bg-blue-500 text-white rounded-2xl rounded-br-sm p-3 max-w-xs">
+                        <div className="text-sm font-medium">B</div>
+                        <div className="text-xs text-blue-100 mt-1">9:02 AM</div>
+                      </div>
+                    </div>
+                    
+                    {/* Response Feedback */}
+                    <div className="flex items-start space-x-2">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        T4Q
+                      </div>
+                      <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
+                        <div className="text-xs text-gray-600 mb-1">9:02 AM</div>
+                        <div className="text-sm text-gray-800">
+                          🎉 <strong>Correct!</strong> Saturn has 146 known moons, making it the planet with the most moons in our solar system.
+                          <br /><br />
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
+                            <div className="flex items-center justify-between text-xs">
+                              <span>🔥 Streak: <strong>13 days</strong></span>
+                              <span>⭐ Score: <strong>+10 points</strong></span>
+                            </div>
+                          </div>
+                          <br />
+                          Text "SCORE" for stats or "MORE" for bonus questions!
+                        </div>
+                      </div>
+                    </div>
+                    
+                    {/* Commands Demo */}
+                    <div className="flex justify-end">
+                      <div className="bg-blue-500 text-white rounded-2xl rounded-br-sm p-3 max-w-xs">
+                        <div className="text-sm font-medium">SCORE</div>
+                        <div className="text-xs text-blue-100 mt-1">9:05 AM</div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-start space-x-2">
+                      <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
+                        T4Q
+                      </div>
+                      <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
+                        <div className="text-xs text-gray-600 mb-1">9:05 AM</div>
+                        <div className="text-sm text-gray-800">
+                          📊 <strong>Your Text4Quiz Stats</strong>
+                          <br /><br />
+                          Current Streak: <strong>13 days</strong> 🔥<br />
+                          Total Score: <strong>1,247 points</strong><br />
+                          Questions Answered: <strong>47</strong><br />
+                          Accuracy Rate: <strong>87%</strong>
+                          <br /><br />
+                          Keep up the great work! 🌟
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-t pt-3 mt-3">
+                    <div className="bg-gray-200 rounded-full px-4 py-2 text-sm text-gray-600 text-center">
+                      Type a message...
+                    </div>
                   </div>
                 </div>
+              </div>
+            </div>
+            
+            {/* Features List */}
+            <div className="space-y-6">
+              <div>
+                <h3 className="text-xl font-semibold text-foreground mb-4">What makes it special?</h3>
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1">
+                      <Check className="h-3 w-3 text-primary-foreground" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">No App Required</div>
+                      <div className="text-sm text-muted-foreground">Works with any phone that can receive text messages</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-secondary rounded-full flex items-center justify-center mt-1">
+                      <Flame className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">Streak Building</div>
+                      <div className="text-sm text-muted-foreground">Get addicted to learning with daily streaks and points</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center mt-1">
+                      <Target className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">Instant Learning</div>
+                      <div className="text-sm text-muted-foreground">Get detailed explanations and learn something new every day</div>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-3">
+                    <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-1">
+                      <MessageCircle className="h-3 w-3 text-white" />
+                    </div>
+                    <div>
+                      <div className="font-medium text-foreground">Simple Commands</div>
+                      <div className="text-sm text-muted-foreground">SCORE, MORE, HELP, STOP - control everything with text</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="bg-muted/50 rounded-lg p-6">
+                <h4 className="font-semibold text-foreground mb-2">Try it yourself!</h4>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Sign up below and you'll receive your first question tomorrow at your preferred time.
+                </p>
+                <Button 
+                  onClick={scrollToSignup}
+                  className="w-full"
+                >
+                  <Phone className="mr-2 h-4 w-4" />
+                  Get Started Now
+                </Button>
               </div>
             </div>
           </div>
