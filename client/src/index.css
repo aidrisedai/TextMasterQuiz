@@ -1,0 +1,146 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: hsl(0, 0%, 100%);
+  --foreground: hsl(20, 14.3%, 4.1%);
+  --muted: hsl(60, 4.8%, 95.9%);
+  --muted-foreground: hsl(25, 5.3%, 44.7%);
+  --popover: hsl(0, 0%, 100%);
+  --popover-foreground: hsl(20, 14.3%, 4.1%);
+  --card: hsl(0, 0%, 100%);
+  --card-foreground: hsl(20, 14.3%, 4.1%);
+  --border: hsl(20, 5.9%, 90%);
+  --input: hsl(20, 5.9%, 90%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(142, 76%, 36%);
+  --secondary-foreground: hsl(355, 7%, 97%);
+  --accent: hsl(35, 91%, 48%);
+  --accent-foreground: hsl(24, 9.8%, 10%);
+  --destructive: hsl(0, 84.2%, 60.2%);
+  --destructive-foreground: hsl(60, 9.1%, 97.8%);
+  --ring: hsl(20, 14.3%, 4.1%);
+  --radius: 0.5rem;
+}
+
+.dark {
+  --background: hsl(240, 10%, 3.9%);
+  --foreground: hsl(0, 0%, 98%);
+  --muted: hsl(240, 3.7%, 15.9%);
+  --muted-foreground: hsl(240, 5%, 64.9%);
+  --popover: hsl(240, 10%, 3.9%);
+  --popover-foreground: hsl(0, 0%, 98%);
+  --card: hsl(240, 10%, 3.9%);
+  --card-foreground: hsl(0, 0%, 98%);
+  --border: hsl(240, 3.7%, 15.9%);
+  --input: hsl(240, 3.7%, 15.9%);
+  --primary: hsl(207, 90%, 54%);
+  --primary-foreground: hsl(211, 100%, 99%);
+  --secondary: hsl(142, 76%, 36%);
+  --secondary-foreground: hsl(0, 0%, 98%);
+  --accent: hsl(35, 91%, 48%);
+  --accent-foreground: hsl(0, 0%, 98%);
+  --destructive: hsl(0, 62.8%, 30.6%);
+  --destructive-foreground: hsl(0, 0%, 98%);
+  --ring: hsl(240, 4.9%, 83.9%);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+}
+
+/* Custom gradient backgrounds */
+.gradient-hero {
+  background: linear-gradient(135deg, 
+    hsla(207, 90%, 54%, 0.05) 0%, 
+    hsla(142, 76%, 36%, 0.05) 50%, 
+    hsla(35, 91%, 48%, 0.05) 100%);
+}
+
+.gradient-stats {
+  background: linear-gradient(135deg, 
+    hsla(142, 76%, 36%, 0.1) 0%, 
+    hsla(142, 76%, 36%, 0.05) 100%);
+}
+
+.gradient-primary {
+  background: linear-gradient(135deg, 
+    hsla(207, 90%, 54%, 0.1) 0%, 
+    hsla(207, 90%, 54%, 0.05) 100%);
+}
+
+.gradient-accent {
+  background: linear-gradient(135deg, 
+    hsla(35, 91%, 48%, 0.1) 0%, 
+    hsla(35, 91%, 48%, 0.05) 100%);
+}
+
+/* Phone mockup styles */
+.phone-mockup {
+  background: linear-gradient(145deg, #2d2d2d, #1a1a1a);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+}
+
+.sms-bubble {
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Button hover effects */
+.btn-primary {
+  @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
+}
+
+.btn-primary:active {
+  transform: scale(0.98);
+}
+
+/* Category selection styling */
+.category-card {
+  @apply border border-border rounded-lg p-3 cursor-pointer transition-all duration-200;
+}
+
+.category-card:hover {
+  @apply bg-accent/5 border-accent/30;
+}
+
+.category-card.selected {
+  @apply bg-primary/10 border-primary/50;
+}
+
+/* Stats card animations */
+.stats-card {
+  @apply transform transition-all duration-200 hover:scale-105;
+}
+
+/* Loading states */
+.loading-spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}

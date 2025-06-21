@@ -1,0 +1,271 @@
+import { useState } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
+import { PhoneInput } from "./phone-input";
+import { useToast } from "@/hooks/use-toast";
+import { useMutation } from "@tanstack/react-query";
+import { api } from "@/lib/api";
+import { Rocket, Loader2 } from "lucide-react";
+
+const signupSchema = z.object({
+  phoneNumber: z.string().min(1, "Phone number is required"),
+  preferredTime: z.string().min(1, "Please select a preferred time"),
+  categoryPreferences: z.array(z.string()).min(1, "Please select at least one category"),
+  terms: z.boolean().refine(val => val === true, {
+    message: "You must accept the terms and conditions"
+  })
+});
+
+type SignupFormData = z.infer<typeof signupSchema>;
+
+const categories = [
+  "Science",
+  "History", 
+  "Sports",
+  "Movies",
+  "Geography",
+  "Literature",
+  "Music",
+  "Art"
+];
+
+const timeOptions = [
+  { value: "06:00", label: "6:00 AM - Early Bird" },
+  { value: "09:00", label: "9:00 AM - Morning Commute" },
+  { value: "12:00", label: "12:00 PM - Lunch Break" },
+  { value: "15:00", label: "3:00 PM - Afternoon" },
+  { value: "18:00", label: "6:00 PM - Evening" },
+  { value: "21:00", label: "9:00 PM - Night Owl" }
+];
+
+export function SignupForm() {
+  const { toast } = useToast();
+  const [isSuccess, setIsSuccess] = useState(false);
+
+  const form = useForm<SignupFormData>({
+    resolver: zodResolver(signupSchema),
+    defaultValues: {
+      phoneNumber: "",
+      preferredTime: "",
+      categoryPreferences: [],
+      terms: false
+    }
+  });
+
+  const signupMutation = useMutation({
+    mutationFn: (data: SignupFormData) => api.signup({
+      ...data,
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
+    }),
+    onSuccess: () => {
+      setIsSuccess(true);
+      toast({
+        title: "Welcome to Text4Quiz!",
+        description: "You'll receive your first question tomorrow at your preferred time.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Signup Failed",
+        description: error.message || "Something went wrong. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+
+  const onSubmit = (data: SignupFormData) => {
+    // Clean phone number for submission
+    const cleanPhone = data.phoneNumber.replace(/\D/g, "");
+    if (cleanPhone.length === 10) {
+      data.phoneNumber = `+1${cleanPhone}`;
+    } else if (cleanPhone.length === 11 && cleanPhone[0] === '1') {
+      data.phoneNumber = `+${cleanPhone}`;
+    }
+    
+    signupMutation.mutate(data);
+  };
+
+  if (isSuccess) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardContent className="pt-6">
+          <div className="text-center">
+            <div className="w-16 h-16 bg-secondary/10 rounded-full flex items-center justify-center mx-auto mb-4">
+              <Rocket className="h-8 w-8 text-secondary" />
+            </div>
+            <h2 className="text-2xl font-bold mb-2">Welcome to Text4Quiz!</h2>
+            <p className="text-muted-foreground mb-4">
+              You're all set! You'll receive your first trivia question tomorrow at your preferred time.
+            </p>
+            <p className="text-sm text-muted-foreground">
+              Remember, you can text "HELP" anytime for commands or "STOP" to unsubscribe.
+            </p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <Card className="w-full max-w-2xl mx-auto">
+      <CardHeader className="text-center">
+        <CardTitle className="text-3xl">Join Text4Quiz</CardTitle>
+        <CardDescription>
+          Start your daily trivia journey in under 2 minutes
+        </CardDescription>
+      </CardHeader>
+      <CardContent>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <PhoneInput {...field} error={form.formState.errors.phoneNumber?.message} />
+                  </FormControl>
+                  <p className="text-sm text-muted-foreground">
+                    We'll send your daily trivia questions here
+                  </p>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="preferredTime"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Preferred Quiz Time</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select your preferred time" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {timeOptions.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="categoryPreferences"
+              render={() => (
+                <FormItem>
+                  <FormLabel>Choose Your Categories</FormLabel>
+                  <div className="grid grid-cols-2 gap-3">
+                    {categories.map((category) => (
+                      <FormField
+                        key={category}
+                        control={form.control}
+                        name="categoryPreferences"
+                        render={({ field }) => {
+                          return (
+                            <FormItem
+                              key={category}
+                              className="flex flex-row items-start space-x-3 space-y-0"
+                            >
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value?.includes(category)}
+                                  onCheckedChange={(checked) => {
+                                    return checked
+                                      ? field.onChange([...field.value, category])
+                                      : field.onChange(
+                                          field.value?.filter(
+                                            (value) => value !== category
+                                          )
+                                        )
+                                  }}
+                                />
+                              </FormControl>
+                              <FormLabel className="text-sm font-normal cursor-pointer">
+                                {category}
+                              </FormLabel>
+                            </FormItem>
+                          )
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="terms"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel className="text-sm">
+                      I agree to receive daily SMS messages and accept the{" "}
+                      <a href="#" className="text-primary hover:underline">
+                        Terms of Service
+                      </a>{" "}
+                      and{" "}
+                      <a href="#" className="text-primary hover:underline">
+                        Privacy Policy
+                      </a>
+                    </FormLabel>
+                  </div>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button
+              type="submit"
+              className="w-full btn-primary"
+              size="lg"
+              disabled={signupMutation.isPending}
+            >
+              {signupMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                <>
+                  <Rocket className="mr-2 h-4 w-4" />
+                  Start My Daily Quiz
+                </>
+              )}
+            </Button>
+          </form>
+        </Form>
+
+        <div className="text-center mt-6">
+          <p className="text-sm text-muted-foreground">
+            Free for 7 days, then $9.99/month. Cancel anytime by texting "STOP"
+          </p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
