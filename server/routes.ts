@@ -35,13 +35,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phoneNumber: data.phoneNumber,
         categoryPreferences: data.categoryPreferences || [],
         preferredTime: data.preferredTime,
-        timezone: data.timezone || "America/New_York",
+        timezone: data.timezone,
         subscriptionStatus: "free",
         isActive: true,
       });
 
-      // Send welcome message
-      await twilioService.sendWelcome(user.phoneNumber, user.preferredTime);
+      // Send welcome message with timezone-aware time display
+      const timeDisplay = new Date(`2000-01-01T${user.preferredTime}`).toLocaleTimeString([], { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+      await twilioService.sendWelcome(user.phoneNumber, `${timeDisplay} (${user.timezone})`);
 
       res.json({ 
         message: "Successfully signed up for Text4Quiz!",

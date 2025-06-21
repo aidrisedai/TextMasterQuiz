@@ -11,11 +11,12 @@ import { PhoneInput } from "./phone-input";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "@/lib/api";
-import { Rocket, Loader2 } from "lucide-react";
+import { Rocket, Loader2, Globe } from "lucide-react";
 
 const signupSchema = z.object({
   phoneNumber: z.string().min(1, "Phone number is required"),
   preferredTime: z.string().min(1, "Please select a preferred time"),
+  timezone: z.string().min(1, "Please select your timezone"),
   categoryPreferences: z.array(z.string()).min(1, "Please select at least one category"),
   terms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
@@ -44,6 +45,23 @@ const timeOptions = [
   { value: "21:00", label: "9:00 PM - Night Owl" }
 ];
 
+const timezoneOptions = [
+  { value: "America/New_York", label: "Eastern Time (ET)" },
+  { value: "America/Chicago", label: "Central Time (CT)" },
+  { value: "America/Denver", label: "Mountain Time (MT)" },
+  { value: "America/Los_Angeles", label: "Pacific Time (PT)" },
+  { value: "America/Anchorage", label: "Alaska Time (AKT)" },
+  { value: "Pacific/Honolulu", label: "Hawaii Time (HST)" },
+  { value: "America/Phoenix", label: "Arizona Time (MST)" },
+  { value: "America/Toronto", label: "Eastern Time - Canada" },
+  { value: "America/Vancouver", label: "Pacific Time - Canada" },
+  { value: "Europe/London", label: "London (GMT/BST)" },
+  { value: "Europe/Paris", label: "Paris (CET/CEST)" },
+  { value: "Europe/Berlin", label: "Berlin (CET/CEST)" },
+  { value: "Asia/Tokyo", label: "Tokyo (JST)" },
+  { value: "Australia/Sydney", label: "Sydney (AEST/AEDT)" }
+];
+
 export function SignupForm() {
   const { toast } = useToast();
   const [isSuccess, setIsSuccess] = useState(false);
@@ -53,16 +71,14 @@ export function SignupForm() {
     defaultValues: {
       phoneNumber: "",
       preferredTime: "",
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       categoryPreferences: [],
       terms: false
     }
   });
 
   const signupMutation = useMutation({
-    mutationFn: (data: SignupFormData) => api.signup({
-      ...data,
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone
-    }),
+    mutationFn: (data: SignupFormData) => api.signup(data),
     onSuccess: () => {
       setIsSuccess(true);
       toast({
@@ -140,30 +156,63 @@ export function SignupForm() {
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="preferredTime"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Preferred Quiz Time</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select your preferred time" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {timeOptions.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <FormField
+                control={form.control}
+                name="preferredTime"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Preferred Quiz Time</FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your preferred time" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {timeOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="timezone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="flex items-center gap-2">
+                      <Globe className="h-4 w-4" />
+                      Your Timezone
+                    </FormLabel>
+                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select your timezone" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent className="max-h-60">
+                        {timezoneOptions.map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-sm text-muted-foreground">
+                      Auto-detected: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                    </p>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </div>
 
             <FormField
               control={form.control}

@@ -3,8 +3,8 @@ import { apiRequest } from "./queryClient";
 export interface SignupData {
   phoneNumber: string;
   preferredTime: string;
-  categoryPreferences: string[];
   timezone: string;
+  categoryPreferences: string[];
   terms: boolean;
 }
 

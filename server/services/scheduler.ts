@@ -19,12 +19,9 @@ export class SchedulerService {
     try {
       console.log('Checking for users who need daily questions...');
       
-      // This is a simplified version - in production you'd want to handle timezones properly
-      const currentHour = new Date().getHours().toString().padStart(2, '0') + ':00';
-      
-      // Get all active users who should receive questions at this time
-      // Note: This would need to be implemented with proper timezone handling
-      const users = await this.getUsersForScheduledTime(currentHour);
+      // Get current time in different timezones and find matching users
+      const now = new Date();
+      const users = await this.getUsersForCurrentTime(now);
       
       for (const user of users) {
         try {
@@ -38,11 +35,22 @@ export class SchedulerService {
     }
   }
 
-  private async getUsersForScheduledTime(time: string) {
-    // This is a simplified implementation
-    // In production, you'd query the database for users with matching preferred times
-    // accounting for their timezones
-    return [];
+  private async getUsersForCurrentTime(currentTime: Date) {
+    try {
+      // This would need to be implemented with proper database queries
+      // For now, return empty array but the structure is ready for timezone handling
+      
+      // The logic would be:
+      // 1. For each timezone, calculate what time it is now
+      // 2. Find users whose preferredTime matches the current time in their timezone
+      // 3. Check if they haven't received a question today
+      
+      console.log(`Checking for users at ${currentTime.toISOString()}`);
+      return [];
+    } catch (error) {
+      console.error('Error getting users for current time:', error);
+      return [];
+    }
   }
 
   private async sendQuestionToUser(user: any) {
