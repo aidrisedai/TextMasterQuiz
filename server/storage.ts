@@ -67,7 +67,7 @@ export class DatabaseStorage implements IStorage {
     }
     
     if (conditions.length > 0) {
-      query = query.where(and(...conditions));
+      query = query.where(and(...conditions)) as typeof query;
     }
     
     // Order by usage count (ascending) and random
@@ -104,7 +104,7 @@ export class DatabaseStorage implements IStorage {
     if (user) {
       const newQuestionsAnswered = user.questionsAnswered + 1;
       const newCorrectAnswers = user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
-      const newTotalScore = user.totalScore + insertAnswer.pointsEarned;
+      const newTotalScore = user.totalScore + (insertAnswer.pointsEarned || 0);
       
       // Calculate streak
       let newStreak = user.currentStreak;
@@ -128,7 +128,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserAnswers(userId: number, limit = 10): Promise<(UserAnswer & { question: Question })[]> {
-    return await db
+    const results = await db
       .select({
         id: userAnswers.id,
         userId: userAnswers.userId,
@@ -144,6 +144,8 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userAnswers.userId, userId))
       .orderBy(desc(userAnswers.answeredAt))
       .limit(limit);
+    
+    return results.filter(result => result.question !== null) as (UserAnswer & { question: Question })[];
   }
 
   async getUserStats(userId: number): Promise<{

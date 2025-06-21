@@ -137,7 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       } else if (messageUpper === 'MORE' && user.subscriptionStatus === 'premium') {
         // Send bonus question for premium users
-        const categories = user.categoryPreferences?.length > 0 
+        const categories = user.categoryPreferences && user.categoryPreferences.length > 0 
           ? user.categoryPreferences 
           : ['general'];
         
@@ -152,7 +152,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       } else if (['A', 'B', 'C', 'D'].includes(messageUpper)) {
         // Handle answer
-        await this.processAnswer(user, messageUpper, phoneNumber);
+        await processAnswer(user, messageUpper, phoneNumber);
       } else {
         // Default response for unrecognized messages
         await twilioService.sendSMS({
@@ -185,10 +185,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  const httpServer = createServer(app);
-
-  // Add method to process answers
-  (httpServer as any).processAnswer = async (user: any, answer: string, phoneNumber: string) => {
+  // Helper function to process answers
+  async function processAnswer(user: any, answer: string, phoneNumber: string) {
     try {
       // Find the most recent question for this user
       // This is simplified - in production you'd want to track pending questions
@@ -225,7 +223,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Process answer error:", error);
     }
-  };
+  }
 
+  const httpServer = createServer(app);
   return httpServer;
 }

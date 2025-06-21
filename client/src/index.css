@@ -106,7 +106,11 @@
 
 /* Button hover effects */
 .btn-primary {
-  @apply bg-primary text-primary-foreground hover:bg-primary/90 transition-all duration-200;
+  @apply bg-primary text-primary-foreground transition-all duration-200;
+}
+
+.btn-primary:hover {
+  background-color: hsl(var(--primary) / 0.9);
 }
 
 .btn-primary:active {
@@ -119,11 +123,13 @@
 }
 
 .category-card:hover {
-  @apply bg-accent/5 border-accent/30;
+  background-color: hsl(var(--accent) / 0.05);
+  border-color: hsl(var(--accent) / 0.3);
 }
 
 .category-card.selected {
-  @apply bg-primary/10 border-primary/50;
+  background-color: hsl(var(--primary) / 0.1);
+  border-color: hsl(var(--primary) / 0.5);
 }
 
 /* Stats card animations */
