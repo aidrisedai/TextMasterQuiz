@@ -54,43 +54,50 @@ export class SchedulerService {
   }
 
   private async sendQuestionToUser(user: any) {
-    // Check if user already received today's question
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    if (user.lastQuizDate && new Date(user.lastQuizDate) >= today) {
-      return; // Already sent today
-    }
-
-    // Get user's preferred categories
-    const categories = user.categoryPreferences?.length > 0 
-      ? user.categoryPreferences 
-      : ['general'];
-
-    // Generate or get a question
-    let question = await storage.getRandomQuestion(categories);
-    
-    if (!question) {
-      // Generate a new question using AI
-      const randomCategory = categories[Math.floor(Math.random() * categories.length)];
-      const generated = await openaiService.generateQuestion(randomCategory);
+    try {
+      // Check if user already received today's question
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
       
-      if (generated) {
-        question = await storage.createQuestion(generated);
+      if (user.lastQuizDate && new Date(user.lastQuizDate) >= today) {
+        return; // Already sent today
       }
-    }
 
-    if (question) {
-      await storage.incrementQuestionUsage(question.id);
+      // Try to get a question from database first
+      let question = await storage.getRandomQuestion();
       
-      const questionNumber = user.questionsAnswered + 1;
-      await twilioService.sendDailyQuestion(
-        user.phoneNumber,
-        question,
-        questionNumber
-      );
+      if (!question) {
+        // Generate a new question using AI
+        const generated = await openaiService.generateQuestion('general', 'medium');
+        
+        if (generated) {
+          question = await storage.createQuestion(generated);
+        }
+      }
+
+      if (question) {
+        await storage.incrementQuestionUsage(question.id);
+        
+        const questionNumber = user.questionsAnswered + 1;
+        await twilioService.sendDailyQuestion(
+          user.phoneNumber,
+          question,
+          questionNumber
+        );
+        
+        console.log(`Sent daily question to user ${user.id}`);
+      }
+    } catch (error) {
+      console.error('Error in sendQuestionToUser:', error);
       
-      console.log(`Sent daily question to user ${user.id}`);
+      // Fallback: send a simple test question via SMS
+      const fallbackMessage = {
+        to: user.phoneNumber,
+        body: `🧠 Test Question: What is 2 + 2?\n\nA) 3\nB) 4\nC) 5\nD) 6\n\nReply with A, B, C, or D`
+      };
+      
+      await twilioService.sendSMS(fallbackMessage);
+      console.log(`Sent fallback question to user ${user.id}`);
     }
   }
 

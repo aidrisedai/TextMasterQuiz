@@ -190,6 +190,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Direct SMS test endpoint
+  app.post("/api/test-sms", async (req, res) => {
+    try {
+      const { to, message } = req.body;
+      
+      if (!to || !message) {
+        return res.status(400).json({ message: "Phone number and message are required" });
+      }
+
+      const result = await twilioService.sendSMS({ to, body: message });
+      
+      if (result) {
+        res.json({ message: "SMS sent successfully" });
+      } else {
+        res.status(500).json({ message: "Failed to send SMS" });
+      }
+    } catch (error: any) {
+      console.error("Direct SMS error:", error);
+      res.status(500).json({ message: "Failed to send SMS" });
+    }
+  });
+
   // Helper function to process answers
   async function processAnswer(user: any, answer: string, phoneNumber: string) {
     try {
