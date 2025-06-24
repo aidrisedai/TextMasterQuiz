@@ -104,7 +104,9 @@ The application is configured for Replit's autoscale deployment:
 
 Preferred communication style: Simple, everyday language.
 
-## Changelog
+## Recent Changes
 
-Changelog:
-- June 24, 2025. Initial setup
+- **SMS Testing Success** (June 24, 2025): Twilio account upgraded to full status, SMS delivery now working to verified phone numbers
+- **Duplicate Prevention System** (June 24, 2025): Implemented comprehensive question uniqueness with smart context limits to prevent OpenAI token overflow
+- **Free Forever Pricing** (June 24, 2025): Updated from "Free Trial" to "Free Forever" model across all user-facing content
+- **Production Deployment** (June 24, 2025): Application successfully deployed and operational
