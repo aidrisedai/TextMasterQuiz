@@ -48,9 +48,10 @@ export class TwilioService {
             console.log(`Status: ${status.status}, Error: ${status.errorCode || 'None'}`);
             console.log(`📋 Message content: ${message.body}`);
             if (status.errorCode === 30032) {
-              console.log(`💡 Carrier rejection (T-Mobile spam filter) - message verified in system`);
+              console.log(`💡 Toll-free number verification required - complete verification in Twilio Console`);
+              console.log(`   Visit: https://console.twilio.com/us1/develop/phone-numbers/manage/incoming`);
             } else {
-              console.log(`💡 The message would be delivered with proper carrier compatibility`);
+              console.log(`💡 The message would be delivered with proper phone number setup`);
             }
           }
         } catch (e) {

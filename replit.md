@@ -106,7 +106,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
-- **SMS Carrier Issues Identified** (June 24, 2025): T-Mobile blocking all messages with error 30032 despite full Twilio account - affects both verified numbers (+15153570454, +12128048576)
+- **SMS Issue Root Cause Found** (June 24, 2025): Error 30032 indicates toll-free number verification required, not T-Mobile carrier blocking. Twilio toll-free numbers need business verification to send SMS messages.
 - **Duplicate Prevention System** (June 24, 2025): Implemented comprehensive question uniqueness with smart context limits to prevent OpenAI token overflow
 - **Free Forever Pricing** (June 24, 2025): Updated from "Free Trial" to "Free Forever" model across all user-facing content
 - **Production Deployment** (June 24, 2025): Application successfully deployed and operational
