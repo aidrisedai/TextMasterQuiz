@@ -27,6 +27,10 @@ export class TwilioService {
       from: phoneNumber,
       bodyLength: message.body.length
     });
+    
+    // For trial accounts, show instructions if SMS fails
+    console.log('Note: Trial accounts require phone number verification at:');
+    console.log('https://console.twilio.com/us1/develop/phone-numbers/manage/verified');
 
     try {
       const result = await client.messages.create({
