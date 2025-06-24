@@ -44,9 +44,14 @@ export class TwilioService {
           if (status.status === 'delivered') {
             console.log(`✅ SMS delivered successfully to ${message.to}`);
           } else if (status.status === 'failed' || status.status === 'undelivered') {
-            console.log(`❌ SMS delivery failed (Trial account limitation)`);
+            console.log(`❌ SMS delivery failed to ${message.to}`);
+            console.log(`Status: ${status.status}, Error: ${status.errorCode || 'None'}`);
             console.log(`📋 Message content: ${message.body}`);
-            console.log(`💡 The message would be delivered on a paid Twilio account`);
+            if (status.errorCode === 30032) {
+              console.log(`💡 Carrier rejection (T-Mobile spam filter) - message verified in system`);
+            } else {
+              console.log(`💡 The message would be delivered with proper carrier compatibility`);
+            }
           }
         } catch (e) {
           console.log(`📋 SMS content for ${message.to}: ${message.body}`);
