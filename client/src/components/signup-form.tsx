@@ -311,7 +311,7 @@ export function SignupForm() {
 
         <div className="text-center mt-6">
           <p className="text-sm text-muted-foreground">
-            Free for 7 days, then $9.99/month. Cancel anytime by texting "STOP"
+            Always free. Optional premium features available. Cancel anytime by texting "STOP"
           </p>
         </div>
       </CardContent>

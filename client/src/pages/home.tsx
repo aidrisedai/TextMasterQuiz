@@ -304,7 +304,7 @@ export default function Home() {
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h2 className="text-3xl font-bold text-foreground mb-4">Simple Pricing</h2>
-            <p className="text-muted-foreground">Start free, upgrade when you're ready for more</p>
+            <p className="text-muted-foreground">Always free, with optional premium features</p>
           </div>
           
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
@@ -312,9 +312,9 @@ export default function Home() {
             <Card>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
-                  <h3 className="text-xl font-semibold mb-2">Free Trial</h3>
+                  <h3 className="text-xl font-semibold mb-2">Free Forever</h3>
                   <div className="text-3xl font-bold">$0</div>
-                  <p className="text-muted-foreground">for 7 days</p>
+                  <p className="text-muted-foreground">always free</p>
                 </div>
                 <ul className="space-y-3 mb-8">
                   <li className="flex items-center space-x-3">
