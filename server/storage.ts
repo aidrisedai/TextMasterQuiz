@@ -56,12 +56,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined> {
-    // For now, just get any random question without category filtering
-    // to avoid the array issue
-    const result = await db
-      .select()
-      .from(questions)
-      .orderBy(sql`RANDOM()`)
+    let query = db.select().from(questions);
+    
+    // Exclude questions the user has already answered
+    if (excludeIds && excludeIds.length > 0) {
+      query = query.where(sql`${questions.id} NOT IN (${excludeIds.join(',')})`) as typeof query;
+    }
+    
+    // Order by usage count (ascending) to prefer less-used questions, then random
+    const result = await query
+      .orderBy(questions.usageCount, sql`RANDOM()`)
       .limit(1);
     
     return result[0] || undefined;

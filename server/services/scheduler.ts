@@ -63,8 +63,12 @@ export class SchedulerService {
         return; // Already sent today
       }
 
-      // Try to get a question from database first
-      let question = await storage.getRandomQuestion();
+      // Get questions this user has already answered
+      const userAnswers = await storage.getUserAnswers(user.id, 1000); // Get all answers
+      const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
+      
+      // Try to get a question from database that user hasn't answered
+      let question = await storage.getRandomQuestion([], answeredQuestionIds);
       
       if (!question) {
         // Generate a new question using AI
