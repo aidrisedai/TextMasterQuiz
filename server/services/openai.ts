@@ -43,6 +43,8 @@ Requirements:
         prompt += `\\nGenerate a completely different question that doesn't overlap with the topics above.`;
       }
 
+      prompt += `
+
 Respond with JSON in this exact format:
 {
   "questionText": "Your question here?",
