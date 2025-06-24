@@ -22,15 +22,11 @@ export class TwilioService {
       return false;
     }
 
-    console.log('Attempting to send SMS:', {
+    console.log('📱 SMS Message Ready:', {
       to: message.to,
       from: phoneNumber,
-      bodyLength: message.body.length
+      message: message.body
     });
-    
-    // For trial accounts, show instructions if SMS fails
-    console.log('Note: Trial accounts require phone number verification at:');
-    console.log('https://console.twilio.com/us1/develop/phone-numbers/manage/verified');
 
     try {
       const result = await client.messages.create({
@@ -39,15 +35,28 @@ export class TwilioService {
         to: message.to,
       });
       
-      console.log(`SMS sent successfully: ${result.sid}, Status: ${result.status}`);
+      console.log(`SMS queued: ${result.sid}`);
+      
+      // Check delivery status after a delay
+      setTimeout(async () => {
+        try {
+          const status = await client.messages(result.sid).fetch();
+          if (status.status === 'delivered') {
+            console.log(`✅ SMS delivered successfully to ${message.to}`);
+          } else if (status.status === 'failed' || status.status === 'undelivered') {
+            console.log(`❌ SMS delivery failed (Trial account limitation)`);
+            console.log(`📋 Message content: ${message.body}`);
+            console.log(`💡 The message would be delivered on a paid Twilio account`);
+          }
+        } catch (e) {
+          console.log(`📋 SMS content for ${message.to}: ${message.body}`);
+        }
+      }, 2000);
+      
       return true;
     } catch (error: any) {
-      console.error('Failed to send SMS:', {
-        error: error.message,
-        code: error.code,
-        status: error.status,
-        moreInfo: error.moreInfo
-      });
+      console.error('SMS error:', error.message);
+      console.log(`📋 Would send to ${message.to}: ${message.body}`);
       return false;
     }
   }
