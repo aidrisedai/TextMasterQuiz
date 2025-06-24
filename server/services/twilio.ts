@@ -18,9 +18,15 @@ export interface SMSMessage {
 export class TwilioService {
   async sendSMS(message: SMSMessage): Promise<boolean> {
     if (!accountSid || !authToken || !phoneNumber) {
-      console.log('SMS would be sent:', message);
+      console.log('Missing Twilio credentials - SMS would be sent:', message);
       return false;
     }
+
+    console.log('Attempting to send SMS:', {
+      to: message.to,
+      from: phoneNumber,
+      bodyLength: message.body.length
+    });
 
     try {
       const result = await client.messages.create({
@@ -29,10 +35,15 @@ export class TwilioService {
         to: message.to,
       });
       
-      console.log(`SMS sent successfully: ${result.sid}`);
+      console.log(`SMS sent successfully: ${result.sid}, Status: ${result.status}`);
       return true;
-    } catch (error) {
-      console.error('Failed to send SMS:', error);
+    } catch (error: any) {
+      console.error('Failed to send SMS:', {
+        error: error.message,
+        code: error.code,
+        status: error.status,
+        moreInfo: error.moreInfo
+      });
       return false;
     }
   }
