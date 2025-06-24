@@ -34,13 +34,17 @@ Requirements:
 - Make sure the question is factually accurate
 - Avoid overly obscure or controversial topics`;
 
-      // Add existing questions context to prevent duplicates
+      // Add existing questions context to prevent duplicates (limited to recent questions)
       if (existingQuestions.length > 0) {
-        prompt += `\\n\\nIMPORTANT: Do NOT generate questions similar to these existing ones:\\n`;
-        existingQuestions.forEach((q, i) => {
-          prompt += `${i + 1}. ${q}\\n`;
+        // Limit to first 15 questions to stay within token limits
+        const limitedQuestions = existingQuestions.slice(0, 15);
+        prompt += `\\n\\nIMPORTANT: Do NOT generate questions similar to these recent ones:\\n`;
+        limitedQuestions.forEach((q, i) => {
+          // Truncate very long questions to save tokens
+          const truncatedQ = q.length > 100 ? q.substring(0, 100) + '...' : q;
+          prompt += `${i + 1}. ${truncatedQ}\\n`;
         });
-        prompt += `\\nGenerate a completely different question that doesn't overlap with the topics above.`;
+        prompt += `\\nGenerate a completely different question with a new topic/subject.`;
       }
 
       prompt += `
@@ -147,6 +151,8 @@ Respond with JSON in this exact format:
   }
 
   async generateBonusQuestion(userHistory: string[], categories: string[]): Promise<GeneratedQuestion | null> {
+    // Limit user history to recent 10 questions to prevent token overflow
+    const limitedHistory = userHistory.slice(0, 10);
     const randomCategory = categories[Math.floor(Math.random() * categories.length)] || 'general';
     return this.generateQuestion(randomCategory, 'medium');
   }
