@@ -18,21 +18,30 @@ export interface GeneratedQuestion {
 }
 
 export class OpenAIService {
-  async generateQuestion(category: string = 'general', difficulty: string = 'medium'): Promise<GeneratedQuestion | null> {
+  async generateQuestion(category: string = 'general', difficulty: string = 'medium', existingQuestions: string[] = []): Promise<GeneratedQuestion | null> {
     if (!process.env.OPENAI_API_KEY && !process.env.OPENAI_KEY && !process.env.AI_API_KEY) {
       console.log('OpenAI API key not found. Using fallback question generation.');
       return this.getFallbackQuestion(category, difficulty);
     }
 
     try {
-      const prompt = `Generate a ${difficulty} difficulty trivia question for the category "${category}". 
+      let prompt = `Generate a ${difficulty} difficulty trivia question for the category "${category}". 
       
 Requirements:
 - Question should be educational and engaging
 - Provide 4 multiple choice options (A, B, C, D)
 - Include a detailed explanation for the correct answer
 - Make sure the question is factually accurate
-- Avoid overly obscure or controversial topics
+- Avoid overly obscure or controversial topics`;
+
+      // Add existing questions context to prevent duplicates
+      if (existingQuestions.length > 0) {
+        prompt += `\\n\\nIMPORTANT: Do NOT generate questions similar to these existing ones:\\n`;
+        existingQuestions.forEach((q, i) => {
+          prompt += `${i + 1}. ${q}\\n`;
+        });
+        prompt += `\\nGenerate a completely different question that doesn't overlap with the topics above.`;
+      }
 
 Respond with JSON in this exact format:
 {

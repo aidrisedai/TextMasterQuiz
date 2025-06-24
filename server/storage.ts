@@ -11,6 +11,7 @@ export interface IStorage {
   
   // Question methods
   getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined>;
+  getAllQuestions(): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   incrementQuestionUsage(id: number): Promise<void>;
   
@@ -69,6 +70,10 @@ export class DatabaseStorage implements IStorage {
       .limit(1);
     
     return result[0] || undefined;
+  }
+
+  async getAllQuestions(): Promise<Question[]> {
+    return await db.select().from(questions);
   }
 
   async createQuestion(insertQuestion: InsertQuestion): Promise<Question> {

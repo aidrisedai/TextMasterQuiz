@@ -71,8 +71,12 @@ export class SchedulerService {
       let question = await storage.getRandomQuestion([], answeredQuestionIds);
       
       if (!question) {
-        // Generate a new question using AI
-        const generated = await openaiService.generateQuestion('general', 'medium');
+        // Get existing questions to avoid duplicates
+        const allQuestions = await storage.getAllQuestions();
+        const existingQuestionTexts = allQuestions.map(q => q.questionText);
+        
+        // Generate a new question using AI with duplicate prevention
+        const generated = await openaiService.generateQuestion('general', 'medium', existingQuestionTexts);
         
         if (generated) {
           question = await storage.createQuestion(generated);
