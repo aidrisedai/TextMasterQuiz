@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
 import { schedulerService } from "./services/scheduler";
+import { adminRoutes } from "./routes-admin.js";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 
@@ -211,6 +212,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to send SMS" });
     }
   });
+
+  // Admin routes for question management
+  app.use("/api/admin", adminRoutes);
 
   // Helper function to process answers
   async function processAnswer(user: any, answer: string, phoneNumber: string) {
