@@ -1,4 +1,4 @@
-import { openaiService } from '../services/openai.js';
+import { geminiService } from '../services/gemini.js';
 import { storage } from '../storage.js';
 
 // Categories for question generation
@@ -31,7 +31,7 @@ async function generateQuestionsForCategory(category: string, count: number = 20
     try {
       console.log(`Attempt ${attempts}: Generating question ${successCount + 1}/${count} for ${category}`);
       
-      const question = await openaiService.generateQuestion(
+      const question = await geminiService.generateQuestion(
         category, 
         'medium', 
         categoryQuestions.slice(-10) // Use last 10 questions to avoid duplicates

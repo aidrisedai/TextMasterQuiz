@@ -1,7 +1,7 @@
 import cron from 'node-cron';
 import { storage } from '../storage';
 import { twilioService } from './twilio';
-import { openaiService } from './openai';
+import { geminiService } from './gemini';
 
 export class SchedulerService {
   private jobs = new Map<string, cron.ScheduledTask>();
@@ -80,7 +80,7 @@ export class SchedulerService {
           .map(q => q.questionText);
         
         // Generate a new question using AI with duplicate prevention
-        const generated = await openaiService.generateQuestion('general', 'medium', recentQuestions);
+        const generated = await geminiService.generateQuestion('general', 'medium', recentQuestions);
         
         if (generated) {
           question = await storage.createQuestion(generated);

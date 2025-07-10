@@ -14,7 +14,7 @@ The application follows a modern full-stack architecture with:
 - **UI Framework**: shadcn/ui components built on Radix UI primitives
 - **Styling**: Tailwind CSS with custom design system
 - **SMS Service**: Twilio integration for message delivery
-- **AI Integration**: OpenAI API for dynamic question generation
+- **AI Integration**: Google Gemini API for dynamic question generation
 - **Deployment**: Configured for Replit with autoscale deployment
 
 ## Key Components
@@ -31,8 +31,8 @@ The application follows a modern full-stack architecture with:
    - Graceful fallback when credentials are missing
    - Comprehensive error handling and logging
 
-3. **AI Question Generation** (`server/services/openai.ts`)
-   - Integrates with OpenAI GPT-4o for dynamic question creation
+3. **AI Question Generation** (`server/services/gemini.ts`)
+   - Integrates with Google Gemini 2.5 Flash for dynamic question creation
    - Fallback system for when API is unavailable
    - Structured question format with explanations
 
@@ -76,7 +76,7 @@ The application uses three main entities:
 
 2. **Question Delivery**:
    - Scheduler service runs hourly to check for users needing questions
-   - Questions generated via OpenAI or selected from database
+   - Questions generated via Google Gemini or selected from database
    - SMS sent to users at their preferred time in their timezone
 
 3. **Answer Processing**:
@@ -88,7 +88,7 @@ The application uses three main entities:
 
 - **Neon Database**: Serverless PostgreSQL hosting
 - **Twilio**: SMS messaging service
-- **OpenAI**: AI-powered question generation
+- **Google Gemini**: AI-powered question generation
 - **Replit**: Development and deployment platform
 
 ## Deployment Strategy
@@ -106,7 +106,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **AI Backend Migration to Gemini** (July 10, 2025): Switched from OpenAI to Google Gemini 2.5 Flash for question generation. Updated all services to use Gemini API with improved JSON schema validation.
 - **SMS System Fully Operational** (July 8, 2025): Toll-free number verification completed successfully. SMS delivery now working with "delivered" status confirmed.
-- **Duplicate Prevention System** (June 24, 2025): Implemented comprehensive question uniqueness with smart context limits to prevent OpenAI token overflow
+- **Duplicate Prevention System** (June 24, 2025): Implemented comprehensive question uniqueness with smart context limits to prevent token overflow
 - **Free Forever Pricing** (June 24, 2025): Updated from "Free Trial" to "Free Forever" model across all user-facing content
 - **Production Deployment** (June 24, 2025): Application successfully deployed and operational
