@@ -5,6 +5,7 @@ import { storage } from '../storage.js';
 const categories = [
   'general',
   'science', 
+  'physics',
   'history',
   'geography',
   'sports',
