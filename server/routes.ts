@@ -147,7 +147,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? user.categoryPreferences 
           : ['general'];
         
-        const generated = await openaiService.generateBonusQuestion([], categories);
+        const generated = await geminiService.generateBonusQuestion([], categories);
         if (generated) {
           const question = await storage.createQuestion(generated);
           await twilioService.sendDailyQuestion(
@@ -215,6 +215,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Admin routes for question management
   app.use("/api/admin", adminRoutes);
+  
+  // Test routes for SMS commands
+  const testRoutes = await import('./routes-test.js');
+  app.use("/api/test", testRoutes.default);
 
   // Helper function to process answers
   async function processAnswer(user: any, answer: string, phoneNumber: string) {

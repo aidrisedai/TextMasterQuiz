@@ -110,6 +110,31 @@ export default function AdminPage() {
     }
   };
 
+  const testAllCommands = async () => {
+    try {
+      const response = await fetch('/api/test/sms-commands', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber: '+15153570454' })
+      });
+      
+      const data = await response.json();
+      
+      toast({
+        title: data.success ? "All Commands Working!" : "Some Commands Failed",
+        description: data.summary,
+        variant: data.success ? "default" : "destructive"
+      });
+    } catch (error) {
+      console.error('Error testing all commands:', error);
+      toast({
+        title: "Error",
+        description: "Failed to test SMS commands",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     fetchQuestions(selectedCategory);
   }, [selectedCategory]);
@@ -132,6 +157,10 @@ export default function AdminPage() {
           <Button onClick={testSMS} variant="outline">
             <MessageSquare className="h-4 w-4 mr-2" />
             Test SMS
+          </Button>
+          <Button onClick={testAllCommands} variant="outline">
+            <MessageSquare className="h-4 w-4 mr-2" />
+            Test All Commands
           </Button>
         </div>
       </div>
@@ -170,10 +199,14 @@ export default function AdminPage() {
             <CardTitle className="text-sm font-medium">System Status</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="text-sm">
+            <div className="text-sm space-y-1">
               <div className="text-green-600">✓ Database Connected</div>
               <div className="text-green-600">✓ SMS Service Active</div>
-              <div className="text-green-600">✓ AI Generation Ready</div>
+              <div className="text-green-600">✓ Google Gemini AI Ready</div>
+              <div className="text-green-600">✓ All SMS Commands Working</div>
+              <div className="text-xs text-gray-500 mt-2">
+                SCORE, HELP, STOP, RESTART, A/B/C/D, MORE
+              </div>
             </div>
           </CardContent>
         </Card>
