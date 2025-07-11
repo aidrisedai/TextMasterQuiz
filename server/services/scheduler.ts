@@ -101,15 +101,19 @@ export class SchedulerService {
       const userAnswers = await storage.getUserAnswers(user.id, 1000);
       const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
       
-      // Select categories based on user preferences
-      const categories = user.categoryPreferences && user.categoryPreferences.length > 0 
+      // Select ONE category for today's question (rotate through user preferences)
+      const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
         ? user.categoryPreferences 
         : ['general'];
       
-      console.log(`🎯 Using categories: ${categories.join(', ')}`);
+      // Use the number of questions answered to rotate through categories
+      const categoryIndex = user.questionsAnswered % userCategories.length;
+      const todayCategory = userCategories[categoryIndex];
       
-      // Try to get a question from database that user hasn't answered
-      let question = await storage.getRandomQuestion(categories, answeredQuestionIds);
+      console.log(`🎯 Today's category: ${todayCategory} (${categoryIndex + 1}/${userCategories.length})`);
+      
+      // Try to get a question from database that user hasn't answered from TODAY'S category only
+      let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
       
       if (!question) {
         console.log('🤖 No unused questions found, generating new question with AI...');
@@ -121,16 +125,15 @@ export class SchedulerService {
           .slice(0, 10)
           .map(q => q.questionText);
         
-        // Generate a new question using AI with duplicate prevention
-        const category = categories[Math.floor(Math.random() * categories.length)];
-        const generated = await geminiService.generateQuestion(category, 'medium', recentQuestions);
+        // Generate a new question using AI with duplicate prevention for TODAY'S category only
+        const generated = await geminiService.generateQuestion(todayCategory, 'medium', recentQuestions);
         
         if (generated) {
           question = await storage.createQuestion(generated);
-          console.log(`✨ Generated new ${category} question: ${question.questionText.substring(0, 50)}...`);
+          console.log(`✨ Generated new ${todayCategory} question: ${question.questionText.substring(0, 50)}...`);
         }
       } else {
-        console.log(`📚 Using existing question: ${question.questionText.substring(0, 50)}...`);
+        console.log(`📚 Using existing ${todayCategory} question: ${question.questionText.substring(0, 50)}...`);
       }
 
       if (question) {
@@ -144,7 +147,7 @@ export class SchedulerService {
         );
         
         // Update user's last quiz date
-        await storage.updateUser(user.id, { lastQuizDate: new Date().toISOString() });
+        await storage.updateUser(user.id, { lastQuizDate: new Date() });
         
         console.log(`✅ Sent daily question #${questionNumber} to user ${user.id}`);
       } else {
