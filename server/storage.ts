@@ -6,6 +6,7 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined>;
+  getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
   
@@ -39,6 +40,10 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
+  async getAllUsers(): Promise<User[]> {
+    return await db.select().from(users);
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const [user] = await db
       .insert(users)
@@ -57,19 +62,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined> {
-    let query = db.select().from(questions);
+    // Get all questions first, then filter in memory for now
+    const allQuestions = await db.select().from(questions);
+    
+    let filteredQuestions = allQuestions;
+    
+    // Filter by categories if provided
+    if (categories && categories.length > 0) {
+      filteredQuestions = filteredQuestions.filter(q => 
+        categories.includes(q.category)
+      );
+    }
     
     // Exclude questions the user has already answered
     if (excludeIds && excludeIds.length > 0) {
-      query = query.where(sql`${questions.id} NOT IN (${excludeIds.join(',')})`) as typeof query;
+      filteredQuestions = filteredQuestions.filter(q => 
+        !excludeIds.includes(q.id)
+      );
     }
     
-    // Order by usage count (ascending) to prefer less-used questions, then random
-    const result = await query
-      .orderBy(questions.usageCount, sql`RANDOM()`)
-      .limit(1);
+    if (filteredQuestions.length === 0) return undefined;
     
-    return result[0] || undefined;
+    // Sort by usage count (ascending) to prefer less-used questions
+    filteredQuestions.sort((a, b) => a.usageCount - b.usageCount);
+    
+    // Take the 10 least used questions and pick randomly from them
+    const leastUsed = filteredQuestions.slice(0, Math.min(10, filteredQuestions.length));
+    const randomIndex = Math.floor(Math.random() * leastUsed.length);
+    
+    return leastUsed[randomIndex];
   }
 
   async getAllQuestions(): Promise<Question[]> {
