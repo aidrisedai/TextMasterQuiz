@@ -106,9 +106,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Twilio webhook for incoming SMS
   app.post("/api/webhook/sms", async (req, res) => {
     try {
+      console.log('📥 Incoming SMS webhook:', req.body);
       const { From: phoneNumber, Body: message } = req.body;
       
       if (!phoneNumber || !message) {
+        console.log('❌ Invalid webhook request - missing phone or message');
         return res.status(400).send('Invalid request');
       }
 
