@@ -124,23 +124,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const messageUpper = message.trim().toUpperCase();
 
       // Handle commands
+      let commandHandled = false;
+      
       if (messageUpper === 'SCORE') {
         const stats = await storage.getUserStats(user.id);
         await twilioService.sendStats(phoneNumber, stats);
+        commandHandled = true;
       } else if (messageUpper === 'HELP') {
         await twilioService.sendHelp(phoneNumber);
+        commandHandled = true;
       } else if (messageUpper === 'STOP') {
         await storage.updateUser(user.id, { isActive: false });
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "You've been unsubscribed from Text4Quiz. Text RESTART to resume."
         });
+        commandHandled = true;
       } else if (messageUpper === 'RESTART') {
         await storage.updateUser(user.id, { isActive: true });
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "Welcome back to Text4Quiz! You'll receive your next question at your scheduled time."
         });
+        commandHandled = true;
       } else if (messageUpper === 'MORE' && user.subscriptionStatus === 'premium') {
         // Send bonus question for premium users
         const categories = user.categoryPreferences && user.categoryPreferences.length > 0 
@@ -156,10 +162,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
             user.questionsAnswered + 1
           );
         }
+        commandHandled = true;
       } else if (['A', 'B', 'C', 'D'].includes(messageUpper)) {
         // Handle answer
         await processAnswer(user, messageUpper, phoneNumber);
-      } else {
+        commandHandled = true;
+      }
+      
+      if (!commandHandled) {
         // Default response for unrecognized messages
         await twilioService.sendSMS({
           to: phoneNumber,
