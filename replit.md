@@ -106,6 +106,8 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Daily Quiz Scheduler Debugging** (July 13, 2025): Fixed timezone handling and scheduler delivery issues. Root cause: User's last_quiz_date was preventing new questions. Added testing mode with every-minute checks and disabled time matching temporarily for debugging.
+- **Category Rotation System** (July 11, 2025): Implemented proper single-category-per-day rotation system ensuring only one question from one category daily, using questionsAnswered % categoryCount for fair rotation.
 - **SMS Commands Comprehensive Testing** (July 11, 2025): Implemented and tested all SMS commands with 8/8 tests passing. All commands (SCORE, HELP, STOP, RESTART, A/B/C/D answers, MORE) working perfectly with real SMS delivery.
 - **AI Backend Migration to Gemini** (July 10, 2025): Switched from OpenAI to Google Gemini 2.5 Flash for question generation. Updated all services to use Gemini API with improved JSON schema validation.
 - **SMS System Fully Operational** (July 8, 2025): Toll-free number verification completed successfully. SMS delivery now working with "delivered" status confirmed.

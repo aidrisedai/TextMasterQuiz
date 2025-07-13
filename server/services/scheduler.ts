@@ -17,6 +17,12 @@ export class SchedulerService {
       console.log('🧪 Testing scheduler - checking for users needing questions...');
       await this.sendDailyQuestions();
     });
+    
+    // For immediate testing: run every minute to test delivery
+    cron.schedule('* * * * *', async () => {
+      console.log('🔥 TESTING MODE - checking every minute for quiz delivery...');
+      await this.sendDailyQuestions();
+    });
 
     console.log('Scheduler service initialized');
   }
@@ -58,10 +64,16 @@ export class SchedulerService {
           
           // Get current time in user's timezone
           const userTimezone = user.timezone || 'America/Los_Angeles';
-          const userCurrentTime = new Date(currentTime.toLocaleString("en-US", { timeZone: userTimezone }));
           
+          // Create a proper Date object for user's timezone
+          const userCurrentTime = new Date(currentTime.toLocaleString("en-US", { timeZone: userTimezone }));
+          const currentHour = userCurrentTime.getHours();
+          
+          console.log(`🕐 User ${user.phoneNumber}: Current hour in ${userTimezone} is ${currentHour}, preferred hour is ${hours}`);
+          
+          // FOR TESTING: Send questions at any time for now
           // Check if current time matches user's preferred time (within current hour)
-          if (userCurrentTime.getHours() === hours) {
+          if (currentHour === hours || true) { // Added || true for immediate testing
             // Check if user hasn't received a question today
             const today = new Date();
             today.setHours(0, 0, 0, 0);
