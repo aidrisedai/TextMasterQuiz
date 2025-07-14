@@ -3,7 +3,8 @@ import fs from "fs";
 import path from "path";
 import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
-import viteConfig from "../vite.config";
+// Only import viteConfig in development
+// import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
 
 const viteLogger = createLogger();
@@ -27,7 +28,6 @@ export async function setupVite(app: Express, server: Server) {
   };
 
   const vite = await createViteServer({
-    ...viteConfig,
     configFile: false,
     customLogger: {
       ...viteLogger,
@@ -45,8 +45,9 @@ export async function setupVite(app: Express, server: Server) {
     const url = req.originalUrl;
 
     try {
+      const currentDir = path.dirname(new URL(import.meta.url).pathname);
       const clientTemplate = path.resolve(
-        import.meta.dirname,
+        currentDir,
         "..",
         "client",
         "index.html",
@@ -68,18 +69,31 @@ export async function setupVite(app: Express, server: Server) {
 }
 
 export function serveStatic(app: Express) {
-  const distPath = path.resolve(import.meta.dirname, "public");
+  // In production, the build files are in dist/public
+  // Use __dirname equivalent for ESM
+  const currentDir = path.dirname(new URL(import.meta.url).pathname);
+  const distPath = path.resolve(currentDir, "public");
+  
+  // Fallback: if running from project root, look for dist/public
+  const fallbackPath = path.resolve(process.cwd(), "dist", "public");
+  
+  let publicPath = distPath;
+  
+  if (!fs.existsSync(distPath) && fs.existsSync(fallbackPath)) {
+    publicPath = fallbackPath;
+  }
 
-  if (!fs.existsSync(distPath)) {
+  if (!fs.existsSync(publicPath)) {
     throw new Error(
-      `Could not find the build directory: ${distPath}, make sure to build the client first`,
+      `Could not find the build directory: ${publicPath}, make sure to build the client first. Tried: ${distPath} and ${fallbackPath}`,
     );
   }
 
-  app.use(express.static(distPath));
+  console.log(`Serving static files from: ${publicPath}`);
+  app.use(express.static(publicPath));
 
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(publicPath, "index.html"));
   });
 }
