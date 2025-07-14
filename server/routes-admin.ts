@@ -3,8 +3,12 @@ import { Router } from 'express';
 import { twilioService } from './services/twilio.js';
 import { storage } from './storage.js';
 import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
+import { requireAuth } from './auth.js';
 
 const router = Router();
+
+// Apply authentication middleware to all admin routes
+router.use(requireAuth);
 
 // Generate questions for all categories
 router.post('/generate-questions', async (req, res) => {

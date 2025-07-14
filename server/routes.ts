@@ -7,6 +7,7 @@ import { schedulerService } from "./services/scheduler";
 import { adminRoutes } from "./routes-admin.js";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import { setupAuth } from "./auth.js";
 
 const signupSchema = insertUserSchema.extend({
   terms: z.boolean().refine(val => val === true, {
@@ -15,6 +16,9 @@ const signupSchema = insertUserSchema.extend({
 });
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Setup authentication
+  setupAuth(app);
+  
   // Initialize scheduler
   schedulerService.init();
 
@@ -155,15 +159,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
           ? user.categoryPreferences 
           : ['general'];
         
-        const generated = await geminiService.generateBonusQuestion([], categories);
-        if (generated) {
-          const question = await storage.createQuestion(generated);
-          await twilioService.sendDailyQuestion(
-            phoneNumber,
-            question,
-            user.questionsAnswered + 1
-          );
-        }
+        // TODO: Import geminiService properly
+        // const generated = await geminiService.generateBonusQuestion([], categories);
+        // if (generated) {
+        //   const question = await storage.createQuestion(generated);
+        //   await twilioService.sendDailyQuestion(
+        //     phoneNumber,
+        //     question,
+        //     user.questionsAnswered + 1
+        //   );
+        // }
         commandHandled = true;
       } else if (['A', 'B', 'C', 'D'].includes(messageUpper)) {
         // Handle answer

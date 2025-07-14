@@ -5,7 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
-import { RefreshCw, Plus, Database, MessageSquare } from 'lucide-react';
+import { RefreshCw, Plus, Database, MessageSquare, LogIn, LogOut, User } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 
 interface Question {
@@ -28,12 +28,60 @@ interface QuestionStats {
   categories: Record<string, number>;
 }
 
+interface AuthStatus {
+  authenticated: boolean;
+  user?: {
+    name: string;
+    email: string;
+    isAdmin: boolean;
+  };
+}
+
 export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<QuestionStats>({ totalQuestions: 0, categories: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const { toast } = useToast();
+
+  const checkAuthStatus = async () => {
+    try {
+      const response = await fetch('/api/auth/status');
+      const data = await response.json();
+      setAuthStatus(data);
+      return data.authenticated;
+    } catch (error) {
+      console.error('Error checking auth status:', error);
+      setAuthStatus({ authenticated: false });
+      return false;
+    } finally {
+      setIsCheckingAuth(false);
+    }
+  };
+
+  const handleGoogleLogin = () => {
+    window.location.href = '/api/auth/google';
+  };
+
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST' });
+      setAuthStatus({ authenticated: false });
+      toast({
+        title: "Logged out",
+        description: "You have been successfully logged out.",
+      });
+    } catch (error) {
+      console.error('Logout error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to logout",
+        variant: "destructive"
+      });
+    }
+  };
 
   const fetchQuestions = async (category?: string) => {
     try {
@@ -136,16 +184,71 @@ export default function AdminPage() {
   };
 
   useEffect(() => {
-    fetchQuestions(selectedCategory);
-  }, [selectedCategory]);
+    const initializeAuth = async () => {
+      const authenticated = await checkAuthStatus();
+      if (authenticated) {
+        fetchQuestions(selectedCategory);
+      }
+    };
+    
+    initializeAuth();
+  }, []);
+
+  useEffect(() => {
+    if (authStatus.authenticated) {
+      fetchQuestions(selectedCategory);
+    }
+  }, [selectedCategory, authStatus.authenticated]);
 
   const categories = ['all', ...Object.keys(stats.categories)];
+
+  // Show loading screen while checking authentication
+  if (isCheckingAuth) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Checking authentication...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login screen if not authenticated
+  if (!authStatus.authenticated) {
+    return (
+      <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
+        <Card className="w-full max-w-md">
+          <CardHeader className="text-center">
+            <CardTitle className="text-2xl">Admin Login Required</CardTitle>
+            <p className="text-gray-600">Please sign in with your Google account to access the admin panel.</p>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button onClick={handleGoogleLogin} className="w-full" size="lg">
+              <LogIn className="h-5 w-5 mr-2" />
+              Sign in with Google
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-bold">Text4Quiz Admin</h1>
-        <div className="flex gap-2">
+        <div className="flex items-center gap-2">
+          {authStatus.user && (
+            <div className="flex items-center gap-2 mr-4">
+              <User className="h-4 w-4" />
+              <span className="text-sm">{authStatus.user.name}</span>
+              <Button onClick={handleLogout} variant="outline" size="sm">
+                <LogOut className="h-4 w-4 mr-2" />
+                Logout
+              </Button>
+            </div>
+          )}
           <Button onClick={() => fetchQuestions(selectedCategory)} variant="outline">
             <RefreshCw className="h-4 w-4 mr-2" />
             Refresh
