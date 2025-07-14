@@ -85,6 +85,20 @@ export function setupAuth(app: Express) {
 
   // Check authentication status
   app.get('/api/auth/status', (req, res) => {
+    // For development: bypass authentication if no Google credentials
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id') {
+      res.json({ 
+        authenticated: true, 
+        user: {
+          id: 'dev-user',
+          email: 'dev@example.com',
+          name: 'Dev User',
+          isAdmin: true
+        }
+      });
+      return;
+    }
+    
     if (req.isAuthenticated() && req.user) {
       res.json({ 
         authenticated: true, 
@@ -98,6 +112,11 @@ export function setupAuth(app: Express) {
 
 // Middleware to protect admin routes
 export function requireAuth(req: any, res: any, next: any) {
+  // For development: bypass authentication if no Google credentials
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id') {
+    return next();
+  }
+  
   if (req.isAuthenticated() && req.user?.isAdmin) {
     return next();
   }
