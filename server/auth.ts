@@ -60,18 +60,36 @@ export function setupAuth(app: Express) {
   app.use(passport.initialize());
   app.use(passport.session());
 
-  // Google OAuth routes
-  app.get('/api/auth/google',
-    passport.authenticate('google', { scope: ['profile', 'email'] })
-  );
+  // Google OAuth routes - only if credentials are configured
+  if (GOOGLE_CLIENT_ID && GOOGLE_CLIENT_ID !== 'your-google-client-id') {
+    app.get('/api/auth/google',
+      passport.authenticate('google', { scope: ['profile', 'email'] })
+    );
 
-  app.get('/api/auth/google/callback',
-    passport.authenticate('google', { failureRedirect: '/admin?error=access_denied' }),
-    (req, res) => {
-      // Successful authentication, redirect to admin page
-      res.redirect('/admin?authenticated=true');
+    app.get('/api/auth/google/callback',
+      passport.authenticate('google', { failureRedirect: '/admin?error=access_denied' }),
+      (req, res) => {
+        // Successful authentication, redirect to admin page
+        res.redirect('/admin?authenticated=true');
+      }
+    );
+  } else {
+    // Development mode - simple bypass
+    app.get('/api/auth/google', (req, res) => {
+      res.json({ message: 'Google OAuth not configured - using development mode' });
+    });
+  }
+
+  // Development login endpoint
+  app.post('/api/auth/dev-login', (req, res) => {
+    if (process.env.NODE_ENV === 'development' || !GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id') {
+      // Set a simple session flag
+      (req as any).session.devAuth = true;
+      res.json({ message: 'Logged in successfully', authenticated: true });
+    } else {
+      res.status(403).json({ error: 'Development login not available in production' });
     }
-  );
+  });
 
   // Logout route
   app.post('/api/auth/logout', (req, res) => {
@@ -85,8 +103,8 @@ export function setupAuth(app: Express) {
 
   // Check authentication status
   app.get('/api/auth/status', (req, res) => {
-    // For development: bypass authentication if no Google credentials
-    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id') {
+    // For development: bypass authentication if no Google credentials or dev session
+    if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id' || (req as any).session?.devAuth) {
       res.json({ 
         authenticated: true, 
         user: {
@@ -112,8 +130,8 @@ export function setupAuth(app: Express) {
 
 // Middleware to protect admin routes
 export function requireAuth(req: any, res: any, next: any) {
-  // For development: bypass authentication if no Google credentials
-  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id') {
+  // For development: bypass authentication if no Google credentials or dev session
+  if (!GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID === 'your-google-client-id' || req.session?.devAuth) {
     return next();
   }
   

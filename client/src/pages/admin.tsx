@@ -62,7 +62,19 @@ export default function AdminPage() {
   };
 
   const handleGoogleLogin = () => {
-    window.location.href = '/api/auth/google';
+    // Try development login first
+    fetch('/api/auth/dev-login', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        if (data.authenticated) {
+          window.location.reload();
+        } else {
+          window.location.href = '/api/auth/google';
+        }
+      })
+      .catch(() => {
+        window.location.href = '/api/auth/google';
+      });
   };
 
   const handleLogout = async () => {
@@ -220,14 +232,17 @@ export default function AdminPage() {
       <div className="container mx-auto p-6 flex items-center justify-center min-h-screen">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">Admin Login Required</CardTitle>
-            <p className="text-gray-600">Please sign in with your Google account to access the admin panel.</p>
+            <CardTitle className="text-2xl">Admin Access</CardTitle>
+            <p className="text-gray-600">Development mode - click to access admin panel</p>
           </CardHeader>
           <CardContent className="space-y-4">
             <Button onClick={handleGoogleLogin} className="w-full" size="lg">
               <LogIn className="h-5 w-5 mr-2" />
-              Sign in with Google
+              Access Admin Panel
             </Button>
+            <div className="text-xs text-gray-500 text-center">
+              For production: Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables
+            </div>
           </CardContent>
         </Card>
       </div>
