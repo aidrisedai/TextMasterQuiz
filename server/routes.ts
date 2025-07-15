@@ -10,11 +10,22 @@ import { z } from "zod";
 import { setupAuth } from "./auth.js";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
+import { asyncHandler, ValidationError, NotFoundError } from "./middleware/error-handler";
+import { validateBody, validateQuery, phoneSchema, timeSchema, timezoneSchema, categoriesSchema } from "./middleware/validation";
+import { signupRateLimit, smsWebhookRateLimit, generalRateLimit } from "./middleware/rate-limiter";
 
-const signupSchema = insertUserSchema.extend({
+const signupSchema = z.object({
+  phoneNumber: phoneSchema,
+  preferredTime: timeSchema,
+  timezone: timezoneSchema,
+  categoryPreferences: categoriesSchema,
   terms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
   })
+});
+
+const userStatsQuerySchema = z.object({
+  phoneNumber: phoneSchema
 });
 
 const scryptAsync = promisify(scrypt);
@@ -58,17 +69,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Ensure default admin user exists
   await ensureDefaultAdmin();
 
-  // User signup
-  app.post("/api/signup", async (req, res) => {
-    try {
-      const data = signupSchema.parse(req.body);
+  // User signup with rate limiting and validation
+  app.post("/api/signup", 
+    generalRateLimit.middleware,
+    signupRateLimit.middleware,
+    validateBody(signupSchema),
+    asyncHandler(async (req, res) => {
+      const data = req.body;
       
       // Check if user already exists
       const existingUser = await storage.getUserByPhoneNumber(data.phoneNumber);
       if (existingUser) {
-        return res.status(400).json({ 
-          message: "A user with this phone number already exists" 
-        });
+        throw new ValidationError("A user with this phone number already exists");
       }
 
       // Create user
@@ -89,7 +101,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       await twilioService.sendWelcome(user.phoneNumber, `${timeDisplay} (${user.timezone})`);
 
-      res.json({ 
+      res.status(201).json({ 
         message: "Successfully signed up for Text4Quiz!",
         user: {
           id: user.id,
@@ -98,20 +110,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
           categoryPreferences: user.categoryPreferences,
         }
       });
-    } catch (error: any) {
-      console.error("Signup error:", error);
-      res.status(400).json({ 
-        message: error.message || "Failed to sign up" 
-      });
-    }
-  });
+    })
+  );
 
-  // Get user stats
-  app.get("/api/user/:phoneNumber/stats", async (req, res) => {
-    try {
-      const user = await storage.getUserByPhoneNumber(req.params.phoneNumber);
+  // Get user stats with validation
+  app.get("/api/user/:phoneNumber/stats", 
+    generalRateLimit.middleware,
+    asyncHandler(async (req, res) => {
+      const phoneNumber = req.params.phoneNumber;
+      
+      // Validate phone number format
+      phoneSchema.parse(phoneNumber);
+      
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
       if (!user) {
-        return res.status(404).json({ message: "User not found" });
+        throw new NotFoundError("User not found");
       }
 
       const stats = await storage.getUserStats(user.id);
@@ -137,11 +150,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           pointsEarned: answer.pointsEarned,
         }))
       });
-    } catch (error: any) {
-      console.error("Get stats error:", error);
-      res.status(500).json({ message: "Failed to get user stats" });
-    }
-  });
+    })
+  );
 
   // Twilio webhook for incoming SMS
   app.post("/api/webhook/sms", async (req, res) => {
