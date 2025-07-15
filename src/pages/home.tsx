@@ -47,25 +47,28 @@ export default function Home() {
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               One engaging trivia question delivered to your phone every day. No app required - just text back A, B, C, or D!
             </p>
-            <Button 
-              variant="outline"
-              size="lg"
-              onClick={() => {
-                const demoSection = document.getElementById('demo');
-                if (demoSection) {
-                  demoSection.scrollIntoView({ behavior: 'smooth' });
-                }
-              }}
-              className="mb-12"
-            >
-              <Trophy className="mr-2 h-4 w-4" />
-              See How It Works
-            </Button>
           </div>
           
           {/* Signup Form directly in hero */}
           <div className="max-w-2xl mx-auto">
             <SignupForm />
+            
+            {/* See How It Works button below the form */}
+            <div className="text-center mt-8">
+              <Button 
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  const demoSection = document.getElementById('demo');
+                  if (demoSection) {
+                    demoSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                See How It Works
+              </Button>
+            </div>
           </div>
         </div>
       </section>
