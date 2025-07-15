@@ -18,6 +18,7 @@ export interface IStorage {
   
   // Answer methods
   recordAnswer(answer: InsertUserAnswer): Promise<UserAnswer>;
+  updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined>;
   getUserAnswers(userId: number, limit?: number): Promise<(UserAnswer & { question: Question })[]>;
   
   // Stats methods
@@ -123,29 +124,68 @@ export class DatabaseStorage implements IStorage {
       .values(insertAnswer)
       .returning();
     
-    // Update user stats
-    const user = await this.getUser(insertAnswer.userId);
-    if (user) {
-      const newQuestionsAnswered = user.questionsAnswered + 1;
-      const newCorrectAnswers = user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
-      const newTotalScore = user.totalScore + (insertAnswer.pointsEarned || 0);
-      
-      // Calculate streak
-      let newStreak = user.currentStreak;
-      if (insertAnswer.isCorrect) {
-        newStreak += 1;
-      } else {
-        newStreak = 0;
+    // Only update user stats if this is a completed answer (not a pending one)
+    if (insertAnswer.userAnswer) {
+      const user = await this.getUser(insertAnswer.userId);
+      if (user) {
+        const newQuestionsAnswered = user.questionsAnswered + 1;
+        const newCorrectAnswers = user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
+        const newTotalScore = user.totalScore + (insertAnswer.pointsEarned || 0);
+        
+        // Calculate streak
+        let newStreak = user.currentStreak;
+        if (insertAnswer.isCorrect) {
+          newStreak += 1;
+        } else {
+          newStreak = 0;
+        }
+        
+        await this.updateUser(insertAnswer.userId, {
+          questionsAnswered: newQuestionsAnswered,
+          correctAnswers: newCorrectAnswers,
+          totalScore: newTotalScore,
+          currentStreak: newStreak,
+          lastQuizDate: new Date(),
+          lastAnswer: insertAnswer.userAnswer,
+        });
       }
-      
-      await this.updateUser(insertAnswer.userId, {
-        questionsAnswered: newQuestionsAnswered,
-        correctAnswers: newCorrectAnswers,
-        totalScore: newTotalScore,
-        currentStreak: newStreak,
-        lastQuizDate: new Date(),
-        lastAnswer: insertAnswer.userAnswer,
-      });
+    }
+    
+    return answer;
+  }
+
+  async updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined> {
+    const [answer] = await db
+      .update(userAnswers)
+      .set(updates)
+      .where(eq(userAnswers.id, answerId))
+      .returning();
+    
+    // Update user stats if this is completing an answer
+    if (answer && updates.userAnswer) {
+      const user = await this.getUser(answer.userId);
+      if (user) {
+        const newQuestionsAnswered = user.questionsAnswered + 1;
+        const newCorrectAnswers = user.correctAnswers + (answer.isCorrect ? 1 : 0);
+        const newTotalScore = user.totalScore + (answer.pointsEarned || 0);
+        
+        // Calculate streak
+        let newStreak = user.currentStreak;
+        if (answer.isCorrect) {
+          newStreak += 1;
+        } else {
+          newStreak = 0;
+        }
+        
+        await this.updateUser(answer.userId, {
+          questionsAnswered: newQuestionsAnswered,
+          correctAnswers: newCorrectAnswers,
+          totalScore: newTotalScore,
+          currentStreak: newStreak,
+          lastQuizDate: new Date(),
+          lastAnswer: answer.userAnswer,
+        });
+      }
     }
     
     return answer;

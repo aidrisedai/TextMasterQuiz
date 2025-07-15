@@ -39,7 +39,7 @@ export const userAnswers = pgTable("user_answers", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   questionId: integer("question_id").notNull().references(() => questions.id),
-  userAnswer: text("user_answer").notNull(),
+  userAnswer: text("user_answer"), // Allow null for pending answers
   isCorrect: boolean("is_correct").notNull(),
   answeredAt: timestamp("answered_at").notNull().defaultNow(),
   pointsEarned: integer("points_earned").notNull().default(0),

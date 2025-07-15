@@ -352,19 +352,50 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Helper function to process answers
   async function processAnswer(user: any, answer: string, phoneNumber: string) {
     try {
-      // Find the most recent question for this user
-      // This is simplified - in production you'd want to track pending questions
+      console.log(`🔍 Processing answer "${answer}" for user ${user.phoneNumber}`);
+      
+      // Find the most recent question this user was sent
       const recentAnswers = await storage.getUserAnswers(user.id, 1);
       
-      // For now, we'll generate a sample response
-      // In production, you'd match against the actual question
-      const isCorrect = Math.random() > 0.3; // 70% chance of being correct for demo
+      if (recentAnswers.length === 0) {
+        console.log(`❌ No recent questions found for user ${user.phoneNumber}`);
+        await twilioService.sendSMS({
+          to: phoneNumber,
+          body: "No recent question found. Please wait for your next daily question."
+        });
+        return;
+      }
+      
+      const lastAnswer = recentAnswers[0];
+      const question = lastAnswer.question;
+      
+      if (!question) {
+        console.log(`❌ Question not found for user ${user.phoneNumber}`);
+        await twilioService.sendSMS({
+          to: phoneNumber,
+          body: "Question not found. Please wait for your next daily question."
+        });
+        return;
+      }
+      
+      // Check if user already answered this question
+      if (lastAnswer.userAnswer) {
+        console.log(`⚠️  User ${user.phoneNumber} already answered question ${question.id}`);
+        await twilioService.sendSMS({
+          to: phoneNumber,
+          body: "You've already answered this question. Wait for your next daily question!"
+        });
+        return;
+      }
+      
+      // Validate the answer against the correct answer
+      const isCorrect = question.correctAnswer.toUpperCase() === answer.toUpperCase();
       const pointsEarned = isCorrect ? 10 : 0;
       
-      // Record the answer
-      await storage.recordAnswer({
-        userId: user.id,
-        questionId: 1, // This would be the actual question ID
+      console.log(`✅ Answer validation: User answered "${answer}", correct answer is "${question.correctAnswer}", isCorrect: ${isCorrect}`);
+      
+      // Update the existing pending answer record
+      await storage.updateAnswer(lastAnswer.id, {
         userAnswer: answer,
         isCorrect,
         pointsEarned,
@@ -373,19 +404,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get updated stats
       const stats = await storage.getUserStats(user.id);
 
-      // Send feedback
+      // Send feedback with actual question data
       await twilioService.sendAnswerFeedback(
         phoneNumber,
         isCorrect,
-        isCorrect ? answer : 'B', // Sample correct answer
-        isCorrect 
-          ? "Great job! You got it right."
-          : "This was a challenging question. The correct answer provides important context about the topic.",
+        question.correctAnswer,
+        question.explanation,
         stats.currentStreak,
         pointsEarned
       );
+      
+      console.log(`📤 Sent feedback to ${user.phoneNumber}: ${isCorrect ? 'Correct' : 'Incorrect'}`);
+      
     } catch (error) {
       console.error("Process answer error:", error);
+      await twilioService.sendSMS({
+        to: phoneNumber,
+        body: "Error processing your answer. Please try again later."
+      });
     }
   }
 

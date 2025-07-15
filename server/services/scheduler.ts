@@ -146,10 +146,16 @@ export class SchedulerService {
           questionNumber
         );
         
-        // Update user's last quiz date
-        await storage.updateUser(user.id, { lastQuizDate: new Date() });
+        // Create a pending answer record so we can track which question was sent
+        await storage.recordAnswer({
+          userId: user.id,
+          questionId: question.id,
+          userAnswer: null, // Will be filled when user responds
+          isCorrect: false, // Will be updated when user responds
+          pointsEarned: 0, // Will be updated when user responds
+        });
         
-        console.log(`✅ Sent daily question #${questionNumber} to user ${user.id}`);
+        console.log(`✅ Sent daily question #${questionNumber} to user ${user.id} and created pending answer record`);
       } else {
         console.log('❌ No question available to send');
       }
