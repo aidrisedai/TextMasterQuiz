@@ -1,6 +1,7 @@
-import React, { forwardRef } from "react";
+import * as React from "react";
 import { Input } from "./ui/input";
 import { Phone } from "lucide-react";
+import { forwardRef } from "react";
 
 interface PhoneInputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   error?: string;
