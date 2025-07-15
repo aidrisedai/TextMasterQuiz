@@ -3,15 +3,26 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent } from "../components/ui/card";
 import { SignupForm } from "../components/signup-form";
-import { MessageCircle, Users, Target, Trophy, Flame, Check, Phone, HelpCircle, StopCircle, MoreHorizontal } from "lucide-react";
+import {
+  MessageCircle,
+  Users,
+  Target,
+  Trophy,
+  Flame,
+  Check,
+  Phone,
+  HelpCircle,
+  StopCircle,
+  MoreHorizontal,
+} from "lucide-react";
 
 export default function Home() {
   const [showSignup, setShowSignup] = useState(false);
 
   const scrollToSignup = () => {
-    const signupSection = document.getElementById('signup');
+    const signupSection = document.getElementById("signup");
     if (signupSection) {
-      signupSection.scrollIntoView({ behavior: 'smooth' });
+      signupSection.scrollIntoView({ behavior: "smooth" });
     }
   };
 
@@ -28,9 +39,24 @@ export default function Home() {
               <h1 className="text-xl font-bold text-foreground">Text4Quiz</h1>
             </div>
             <nav className="hidden md:flex space-x-6">
-              <a href="#features" className="text-muted-foreground hover:text-primary transition-colors">Features</a>
-              <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a>
-              <a href="#signup" className="text-muted-foreground hover:text-primary transition-colors">Sign Up</a>
+              <a
+                href="#features"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Features
+              </a>
+              <a
+                href="#pricing"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Pricing
+              </a>
+              <a
+                href="#demo"
+                className="text-muted-foreground hover:text-primary transition-colors"
+              >
+                Demo
+              </a>
             </nav>
           </div>
         </div>
@@ -41,27 +67,29 @@ export default function Home() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
-              Daily Trivia<br />
+              Daily Trivia
+              <br />
               <span className="text-primary">Via SMS</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              One engaging trivia question delivered to your phone every day. No app required - just text back A, B, C, or D!
+              One engaging trivia question delivered to your phone every day. No
+              app required - just text back A, B, C, or D!
             </p>
           </div>
-          
+
           {/* Signup Form directly in hero */}
           <div className="max-w-2xl mx-auto">
             <SignupForm />
-            
+
             {/* See How It Works button below the form */}
             <div className="text-center mt-8">
-              <Button 
+              <Button
                 variant="outline"
                 size="lg"
                 onClick={() => {
-                  const demoSection = document.getElementById('demo');
+                  const demoSection = document.getElementById("demo");
                   if (demoSection) {
-                    demoSection.scrollIntoView({ behavior: 'smooth' });
+                    demoSection.scrollIntoView({ behavior: "smooth" });
                   }
                 }}
               >
@@ -77,33 +105,44 @@ export default function Home() {
       <section className="py-16 bg-background" id="features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">How Text4Quiz Works</h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">Simple, engaging, and educational - delivered right to your phone</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              How Text4Quiz Works
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Simple, engaging, and educational - delivered right to your phone
+            </p>
           </div>
-          
+
           <div className="grid md:grid-cols-3 gap-8">
             <div className="text-center">
               <div className="w-16 h-16 gradient-primary rounded-full flex items-center justify-center mx-auto mb-4">
                 <Users className="text-primary text-xl" />
               </div>
               <h3 className="text-xl font-semibold mb-2">1. Sign Up</h3>
-              <p className="text-muted-foreground">Enter your phone number and choose your favorite trivia categories</p>
+              <p className="text-muted-foreground">
+                Enter your phone number and choose your favorite trivia
+                categories
+              </p>
             </div>
-            
+
             <div className="text-center">
               <div className="w-16 h-16 gradient-stats rounded-full flex items-center justify-center mx-auto mb-4">
                 <HelpCircle className="text-secondary text-xl" />
               </div>
               <h3 className="text-xl font-semibold mb-2">2. Get Questions</h3>
-              <p className="text-muted-foreground">Receive one trivia question daily at your preferred time</p>
+              <p className="text-muted-foreground">
+                Receive one trivia question daily at your preferred time
+              </p>
             </div>
-            
+
             <div className="text-center">
               <div className="w-16 h-16 gradient-accent rounded-full flex items-center justify-center mx-auto mb-4">
                 <Trophy className="text-accent text-xl" />
               </div>
               <h3 className="text-xl font-semibold mb-2">3. Build Streaks</h3>
-              <p className="text-muted-foreground">Answer correctly to build streaks and earn points</p>
+              <p className="text-muted-foreground">
+                Answer correctly to build streaks and earn points
+              </p>
             </div>
           </div>
         </div>
@@ -113,10 +152,14 @@ export default function Home() {
       <section className="py-16 bg-background" id="demo">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">See It In Action</h2>
-            <p className="text-muted-foreground">Experience the full Text4Quiz conversation flow</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              See It In Action
+            </h2>
+            <p className="text-muted-foreground">
+              Experience the full Text4Quiz conversation flow
+            </p>
           </div>
-          
+
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Phone Mockup */}
             <div className="max-w-sm mx-auto lg:mx-0">
@@ -130,58 +173,81 @@ export default function Home() {
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
                   </div>
                 </div>
-                
+
                 {/* Message Thread */}
                 <div className="bg-gray-100 rounded-b-2xl p-4 h-96 flex flex-col overflow-hidden">
                   <div className="flex-grow space-y-3 overflow-y-auto">
                     {/* Contact Header */}
                     <div className="text-center border-b pb-2 mb-4">
-                      <div className="text-sm font-semibold text-gray-800">Text4Quiz</div>
-                      <div className="text-xs text-gray-500">+1 (555) 123-QUIZ</div>
+                      <div className="text-sm font-semibold text-gray-800">
+                        Text4Quiz
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        +1 (555) 123-QUIZ
+                      </div>
                     </div>
-                    
+
                     {/* Daily Question */}
                     <div className="flex items-start space-x-2">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                         T4Q
                       </div>
                       <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">Today 9:00 AM</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          Today 9:00 AM
+                        </div>
                         <div className="text-sm text-gray-800">
-                          🧠 <strong>Question #47:</strong> Which planet in our solar system has the most moons?
-                          <br /><br />
-                          <strong>A)</strong> Jupiter<br />
-                          <strong>B)</strong> Saturn<br />
-                          <strong>C)</strong> Uranus<br />
+                          🧠 <strong>Question #47:</strong> Which planet in our
+                          solar system has the most moons?
+                          <br />
+                          <br />
+                          <strong>A)</strong> Jupiter
+                          <br />
+                          <strong>B)</strong> Saturn
+                          <br />
+                          <strong>C)</strong> Uranus
+                          <br />
                           <strong>D)</strong> Neptune
-                          <br /><br />
+                          <br />
+                          <br />
                           Reply with A, B, C, or D
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* User Response */}
                     <div className="flex justify-end">
                       <div className="bg-blue-500 text-white rounded-2xl rounded-br-sm p-3 max-w-xs">
                         <div className="text-sm font-medium">B</div>
-                        <div className="text-xs text-blue-100 mt-1">9:02 AM</div>
+                        <div className="text-xs text-blue-100 mt-1">
+                          9:02 AM
+                        </div>
                       </div>
                     </div>
-                    
+
                     {/* Response Feedback */}
                     <div className="flex items-start space-x-2">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                         T4Q
                       </div>
                       <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">9:02 AM</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          9:02 AM
+                        </div>
                         <div className="text-sm text-gray-800">
-                          🎉 <strong>Correct!</strong> Saturn has 146 known moons, making it the planet with the most moons in our solar system.
-                          <br /><br />
+                          🎉 <strong>Correct!</strong> Saturn has 146 known
+                          moons, making it the planet with the most moons in our
+                          solar system.
+                          <br />
+                          <br />
                           <div className="bg-green-50 border border-green-200 rounded-lg p-2 mt-2">
                             <div className="flex items-center justify-between text-xs">
-                              <span>🔥 Streak: <strong>13 days</strong></span>
-                              <span>⭐ Score: <strong>+10 points</strong></span>
+                              <span>
+                                🔥 Streak: <strong>13 days</strong>
+                              </span>
+                              <span>
+                                ⭐ Score: <strong>+10 points</strong>
+                              </span>
                             </div>
                           </div>
                           <br />
@@ -189,35 +255,44 @@ export default function Home() {
                         </div>
                       </div>
                     </div>
-                    
+
                     {/* Commands Demo */}
                     <div className="flex justify-end">
                       <div className="bg-blue-500 text-white rounded-2xl rounded-br-sm p-3 max-w-xs">
                         <div className="text-sm font-medium">SCORE</div>
-                        <div className="text-xs text-blue-100 mt-1">9:05 AM</div>
+                        <div className="text-xs text-blue-100 mt-1">
+                          9:05 AM
+                        </div>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start space-x-2">
                       <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-xs font-bold">
                         T4Q
                       </div>
                       <div className="bg-white rounded-2xl rounded-tl-sm p-3 max-w-xs shadow-sm">
-                        <div className="text-xs text-gray-600 mb-1">9:05 AM</div>
+                        <div className="text-xs text-gray-600 mb-1">
+                          9:05 AM
+                        </div>
                         <div className="text-sm text-gray-800">
                           📊 <strong>Your Text4Quiz Stats</strong>
-                          <br /><br />
-                          Current Streak: <strong>13 days</strong> 🔥<br />
-                          Total Score: <strong>1,247 points</strong><br />
-                          Questions Answered: <strong>47</strong><br />
+                          <br />
+                          <br />
+                          Current Streak: <strong>13 days</strong> 🔥
+                          <br />
+                          Total Score: <strong>1,247 points</strong>
+                          <br />
+                          Questions Answered: <strong>47</strong>
+                          <br />
                           Accuracy Rate: <strong>87%</strong>
-                          <br /><br />
+                          <br />
+                          <br />
                           Keep up the great work! 🌟
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="border-t pt-3 mt-3">
                     <div className="bg-gray-200 rounded-full px-4 py-2 text-sm text-gray-600 text-center">
                       Type a message...
@@ -226,58 +301,80 @@ export default function Home() {
                 </div>
               </div>
             </div>
-            
+
             {/* Features List */}
             <div className="space-y-6">
               <div>
-                <h3 className="text-xl font-semibold text-foreground mb-4">What makes it special?</h3>
+                <h3 className="text-xl font-semibold text-foreground mb-4">
+                  What makes it special?
+                </h3>
                 <div className="space-y-4">
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-primary rounded-full flex items-center justify-center mt-1">
                       <Check className="h-3 w-3 text-primary-foreground" />
                     </div>
                     <div>
-                      <div className="font-medium text-foreground">No App Required</div>
-                      <div className="text-sm text-muted-foreground">Works with any phone that can receive text messages</div>
+                      <div className="font-medium text-foreground">
+                        No App Required
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Works with any phone that can receive text messages
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-secondary rounded-full flex items-center justify-center mt-1">
                       <Flame className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <div className="font-medium text-foreground">Streak Building</div>
-                      <div className="text-sm text-muted-foreground">Get addicted to learning with daily streaks and points</div>
+                      <div className="font-medium text-foreground">
+                        Streak Building
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Get addicted to learning with daily streaks and points
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-accent rounded-full flex items-center justify-center mt-1">
                       <Target className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <div className="font-medium text-foreground">Instant Learning</div>
-                      <div className="text-sm text-muted-foreground">Get detailed explanations and learn something new every day</div>
+                      <div className="font-medium text-foreground">
+                        Instant Learning
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        Get detailed explanations and learn something new every
+                        day
+                      </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-3">
                     <div className="w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center mt-1">
                       <MessageCircle className="h-3 w-3 text-white" />
                     </div>
                     <div>
-                      <div className="font-medium text-foreground">Simple Commands</div>
-                      <div className="text-sm text-muted-foreground">SCORE, MORE, HELP, STOP - control everything with text</div>
+                      <div className="font-medium text-foreground">
+                        Simple Commands
+                      </div>
+                      <div className="text-sm text-muted-foreground">
+                        SCORE, MORE, HELP, STOP - control everything with text
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
-              
+
               <div className="bg-muted/50 rounded-lg p-6">
-                <h4 className="font-semibold text-foreground mb-2">Ready to start?</h4>
+                <h4 className="font-semibold text-foreground mb-2">
+                  Ready to start?
+                </h4>
                 <p className="text-sm text-muted-foreground">
-                  The signup form is right at the top of the page - just scroll up to get started!
+                  The signup form is right at the top of the page - just scroll
+                  up to get started!
                 </p>
               </div>
             </div>
@@ -288,17 +385,20 @@ export default function Home() {
       {/* Signup Form Section (now in hero) */}
       <section className="py-16 bg-muted/30" id="signup">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Play?</h2>
+          <h2 className="text-3xl font-bold text-foreground mb-4">
+            Ready to Play?
+          </h2>
           <p className="text-muted-foreground mb-8">
-            The signup form is at the top of the page - scroll up to get started with your daily trivia journey!
+            The signup form is at the top of the page - scroll up to get started
+            with your daily trivia journey!
           </p>
-          <Button 
-            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+          <Button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             size="lg"
             className="btn-primary"
           >
             <Phone className="mr-2 h-4 w-4" />
-            Scroll to Sign Up
+            Back to Top
           </Button>
         </div>
       </section>
@@ -307,10 +407,14 @@ export default function Home() {
       <section className="py-16 bg-background" id="pricing">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">Simple Pricing</h2>
-            <p className="text-muted-foreground">Always free, with optional premium features</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              Simple Pricing
+            </h2>
+            <p className="text-muted-foreground">
+              Always free, with optional premium features
+            </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
             {/* Free Plan */}
             <Card>
@@ -343,11 +447,13 @@ export default function Home() {
                 </Button>
               </CardContent>
             </Card>
-            
+
             {/* Premium Plan */}
             <Card className="border-2 border-primary relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
-                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">Most Popular</span>
+                <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
+                  Most Popular
+                </span>
               </div>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
@@ -383,7 +489,7 @@ export default function Home() {
               </CardContent>
             </Card>
           </div>
-          
+
           <div className="text-center mt-8">
             <p className="text-sm text-muted-foreground">
               Cancel anytime by texting "STOP" • No contracts or commitments
@@ -396,42 +502,66 @@ export default function Home() {
       <section className="py-16 bg-muted/30">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
-            <h2 className="text-3xl font-bold text-foreground mb-4">SMS Commands</h2>
-            <p className="text-muted-foreground">Control your experience with simple text commands</p>
+            <h2 className="text-3xl font-bold text-foreground mb-4">
+              SMS Commands
+            </h2>
+            <p className="text-muted-foreground">
+              Control your experience with simple text commands
+            </p>
           </div>
-          
+
           <div className="grid md:grid-cols-2 gap-6 max-w-2xl mx-auto">
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Basic Commands</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <code className="text-sm bg-muted px-2 py-1 rounded">SCORE</code>
-                    <span className="text-sm text-muted-foreground">View stats</span>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      SCORE
+                    </code>
+                    <span className="text-sm text-muted-foreground">
+                      View stats
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <code className="text-sm bg-muted px-2 py-1 rounded">HELP</code>
-                    <span className="text-sm text-muted-foreground">Get help</span>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      HELP
+                    </code>
+                    <span className="text-sm text-muted-foreground">
+                      Get help
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <code className="text-sm bg-muted px-2 py-1 rounded">STOP</code>
-                    <span className="text-sm text-muted-foreground">Unsubscribe</span>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      STOP
+                    </code>
+                    <span className="text-sm text-muted-foreground">
+                      Unsubscribe
+                    </span>
                   </div>
                   <div className="flex justify-between items-center">
-                    <code className="text-sm bg-muted px-2 py-1 rounded">RESTART</code>
-                    <span className="text-sm text-muted-foreground">Resume service</span>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      RESTART
+                    </code>
+                    <span className="text-sm text-muted-foreground">
+                      Resume service
+                    </span>
                   </div>
                 </div>
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardContent className="p-6">
                 <h3 className="text-lg font-semibold mb-4">Premium Commands</h3>
                 <div className="space-y-3">
                   <div className="flex justify-between items-center">
-                    <code className="text-sm bg-muted px-2 py-1 rounded">MORE</code>
-                    <span className="text-sm text-muted-foreground">Bonus question</span>
+                    <code className="text-sm bg-muted px-2 py-1 rounded">
+                      MORE
+                    </code>
+                    <span className="text-sm text-muted-foreground">
+                      Bonus question
+                    </span>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground mt-4">
@@ -455,30 +585,80 @@ export default function Home() {
                 <h3 className="text-xl font-bold">Text4Quiz</h3>
               </div>
               <p className="text-background/70 mb-4 max-w-md">
-                Daily trivia delivered to your phone. Learn something new every day with our engaging SMS quiz game.
+                Daily trivia delivered to your phone. Learn something new every
+                day with our engaging SMS quiz game.
               </p>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Product</h4>
               <ul className="space-y-2 text-background/70">
-                <li><a href="#features" className="hover:text-background transition-colors">How it Works</a></li>
-                <li><a href="#pricing" className="hover:text-background transition-colors">Pricing</a></li>
-                <li><a href="#signup" className="hover:text-background transition-colors">Sign Up</a></li>
+                <li>
+                  <a
+                    href="#features"
+                    className="hover:text-background transition-colors"
+                  >
+                    How it Works
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#pricing"
+                    className="hover:text-background transition-colors"
+                  >
+                    Pricing
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#demo"
+                    className="hover:text-background transition-colors"
+                  >
+                    Demo
+                  </a>
+                </li>
               </ul>
             </div>
-            
+
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-background/70">
-                <li><a href="#" className="hover:text-background transition-colors">FAQ</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">Contact Us</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">Privacy Policy</a></li>
-                <li><a href="#" className="hover:text-background transition-colors">Terms of Service</a></li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-background transition-colors"
+                  >
+                    FAQ
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-background transition-colors"
+                  >
+                    Contact Us
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-background transition-colors"
+                  >
+                    Privacy Policy
+                  </a>
+                </li>
+                <li>
+                  <a
+                    href="#"
+                    className="hover:text-background transition-colors"
+                  >
+                    Terms of Service
+                  </a>
+                </li>
               </ul>
             </div>
           </div>
-          
+
           <div className="border-t border-background/20 mt-8 pt-8 text-center text-background/70">
             <p>&copy; 2025 Text4Quiz. All rights reserved.</p>
           </div>
