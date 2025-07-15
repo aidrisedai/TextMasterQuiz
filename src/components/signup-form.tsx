@@ -1,5 +1,4 @@
-import * as React from "react";
-import { useState } from "react";
+import React, { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -27,15 +26,14 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 const categories = [
-  { value: "science", label: "Science" },
-  { value: "history", label: "History" }, 
-  { value: "sports", label: "Sports" },
-  { value: "general", label: "General Knowledge" },
-  { value: "geography", label: "Geography" },
-  { value: "literature", label: "Literature" },
-  { value: "arts", label: "Arts" },
-  { value: "technology", label: "Technology" },
-  { value: "physics", label: "Physics" }
+  "Science",
+  "History", 
+  "Sports",
+  "Movies",
+  "Geography",
+  "Literature",
+  "Music",
+  "Art"
 ];
 
 const timeOptions = [
@@ -225,30 +223,31 @@ export function SignupForm() {
                   <div className="grid grid-cols-2 gap-3">
                     {categories.map((category) => (
                       <FormField
-                        key={category.value}
+                        key={category}
                         control={form.control}
                         name="categoryPreferences"
                         render={({ field }) => {
                           return (
                             <FormItem
+                              key={category}
                               className="flex flex-row items-start space-x-3 space-y-0"
                             >
                               <FormControl>
                                 <Checkbox
-                                  checked={field.value?.includes(category.value)}
+                                  checked={field.value?.includes(category)}
                                   onCheckedChange={(checked) => {
                                     return checked
-                                      ? field.onChange([...field.value, category.value])
+                                      ? field.onChange([...field.value, category])
                                       : field.onChange(
                                           field.value?.filter(
-                                            (value) => value !== category.value
+                                            (value) => value !== category
                                           )
                                         )
                                   }}
                                 />
                               </FormControl>
                               <FormLabel className="text-sm font-normal cursor-pointer">
-                                {category.label}
+                                {category}
                               </FormLabel>
                             </FormItem>
                           )

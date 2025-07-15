@@ -1,19 +1,12 @@
-import * as React from 'react';
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../components/ui/tabs';
 import { ScrollArea } from '../components/ui/scroll-area';
 import { Separator } from '../components/ui/separator';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../components/ui/form';
 import { RefreshCw, Plus, Database, MessageSquare, LogIn, LogOut, User } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 
 interface Question {
   id: number;
@@ -38,36 +31,20 @@ interface QuestionStats {
 interface AuthStatus {
   authenticated: boolean;
   user?: {
-    id: number;
     name: string;
     email: string;
     isAdmin: boolean;
   };
 }
 
-const loginSchema = z.object({
-  username: z.string().min(1, "Username is required"),
-  password: z.string().min(1, "Password is required"),
-});
-
 export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<QuestionStats>({ totalQuestions: 0, categories: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('questions');
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
   const { toast } = useToast();
-  
-  const loginForm = useForm<z.infer<typeof loginSchema>>({
-    resolver: zodResolver(loginSchema),
-    defaultValues: {
-      username: "",
-      password: "",
-    },
-  });
 
   const checkAuthStatus = async () => {
     try {
@@ -84,49 +61,26 @@ export default function AdminPage() {
     }
   };
 
-  const handleLogin = async (data: z.infer<typeof loginSchema>) => {
-    setIsLoggingIn(true);
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(data),
+  const handleGoogleLogin = () => {
+    // Try development login first
+    fetch('/api/auth/dev-login', { method: 'POST' })
+      .then(response => response.json())
+      .then(data => {
+        if (data.authenticated) {
+          window.location.reload();
+        } else {
+          window.location.href = '/api/auth/google';
+        }
+      })
+      .catch(() => {
+        window.location.href = '/api/auth/google';
       });
-      
-      const result = await response.json();
-      
-      if (response.ok) {
-        setAuthStatus({ authenticated: true, user: result.user });
-        toast({
-          title: "Login successful",
-          description: "Welcome to the admin panel!",
-        });
-        fetchQuestions();
-      } else {
-        toast({
-          title: "Login failed",
-          description: result.message || "Invalid credentials",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Login failed",
-        description: "An error occurred during login",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoggingIn(false);
-    }
   };
 
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
       setAuthStatus({ authenticated: false });
-      loginForm.reset();
       toast({
         title: "Logged out",
         description: "You have been successfully logged out.",
@@ -279,54 +233,15 @@ export default function AdminPage() {
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
             <CardTitle className="text-2xl">Admin Access</CardTitle>
-            <p className="text-gray-600">Enter your admin credentials</p>
+            <p className="text-gray-600">Development mode - click to access admin panel</p>
           </CardHeader>
-          <CardContent>
-            <Form {...loginForm}>
-              <form onSubmit={loginForm.handleSubmit(handleLogin)} className="space-y-4">
-                <FormField
-                  control={loginForm.control}
-                  name="username"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Username</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter username" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={loginForm.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Password</FormLabel>
-                      <FormControl>
-                        <Input type="password" placeholder="Enter password" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <Button type="submit" className="w-full" size="lg" disabled={isLoggingIn}>
-                  {isLoggingIn ? (
-                    <>
-                      <RefreshCw className="h-5 w-5 mr-2 animate-spin" />
-                      Logging in...
-                    </>
-                  ) : (
-                    <>
-                      <LogIn className="h-5 w-5 mr-2" />
-                      Login
-                    </>
-                  )}
-                </Button>
-              </form>
-            </Form>
-            <div className="text-xs text-gray-500 text-center mt-4">
-              Admin credentials are securely stored in the database
+          <CardContent className="space-y-4">
+            <Button onClick={handleGoogleLogin} className="w-full" size="lg">
+              <LogIn className="h-5 w-5 mr-2" />
+              Access Admin Panel
+            </Button>
+            <div className="text-xs text-gray-500 text-center">
+              For production: Set GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET environment variables
             </div>
           </CardContent>
         </Card>
@@ -415,7 +330,7 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs defaultValue="questions" className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="questions">Questions</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -520,10 +435,7 @@ export default function AdminPage() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => {
-                          setSelectedCategory(category);
-                          setActiveTab('questions');
-                        }}
+                        onClick={() => setSelectedCategory(category)}
                       >
                         View
                       </Button>
