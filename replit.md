@@ -106,6 +106,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Admin Session Configuration Fix** (July 15, 2025): Fixed production deployment issue where admin dashboard showed 0 questions due to session cookie configuration. Modified session middleware to use secure: false with httpOnly and sameSite settings for compatibility across all environments. Admin authentication now works properly in both development and production.
 - **Category Standardization & UX Improvements** (July 15, 2025): Fixed category naming inconsistencies by merging "Sports"/"sports" and "Science"/"science" into standardized lowercase versions. Updated signup form to use consistent category names with user-friendly labels. Moved signup form directly into hero section to reduce clicks and improve conversion.
 - **Critical SMS Answer Validation Fix** (July 15, 2025): Fixed major bug in answer processing that was using random chance (70%) instead of actual answer validation. System now properly compares user answers against real question answers, updates user statistics correctly, and provides accurate feedback. Implemented pending answer tracking system and proper streak calculations.
 - **Production SMS Deployment** (July 15, 2025): Enabled full production SMS delivery to all users. Removed testing restrictions so daily questions are now sent to all active users at their preferred times. Disabled testing scheduler (5-minute intervals) and kept production scheduler (hourly checks). System now fully operational for all registered users.
