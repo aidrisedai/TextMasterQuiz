@@ -3,6 +3,7 @@ import { Router } from 'express';
 import { twilioService } from './services/twilio.js';
 import { storage } from './storage.js';
 import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
+import { geminiService } from './services/gemini.js';
 
 const router = Router();
 
@@ -44,6 +45,51 @@ router.post('/generate-questions/:category', async (req, res) => {
   } catch (error) {
     console.error('Category question generation error:', error);
     res.status(500).json({ error: 'Failed to generate category questions' });
+  }
+});
+
+// Generate a single question for immediate use
+router.post('/generate-single/:category', async (req, res) => {
+  try {
+    const { category } = req.params;
+    
+    console.log(`Generating single question for category: ${category}`);
+    
+    const existingQuestions = await storage.getAllQuestions();
+    const categoryQuestions = existingQuestions
+      .filter(q => q.category === category)
+      .map(q => q.questionText);
+    
+    const question = await geminiService.generateQuestion(
+      category, 
+      'medium', 
+      categoryQuestions.slice(-5)
+    );
+    
+    if (question) {
+      const savedQuestion = await storage.createQuestion({
+        questionText: question.questionText,
+        optionA: question.optionA,
+        optionB: question.optionB,
+        optionC: question.optionC,
+        optionD: question.optionD,
+        correctAnswer: question.correctAnswer,
+        explanation: question.explanation,
+        category: question.category,
+        difficultyLevel: question.difficultyLevel,
+        timesUsed: 0
+      });
+      
+      res.json({ 
+        message: `Question generated successfully for ${category}`,
+        question: savedQuestion
+      });
+    } else {
+      res.status(500).json({ error: 'Failed to generate question' });
+    }
+  } catch (error) {
+    console.error('Single question generation error:', error);
+    res.status(500).json({ error: 'Failed to generate single question' });
   }
 });
 
