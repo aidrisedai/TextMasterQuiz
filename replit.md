@@ -106,6 +106,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Production SMS Deployment** (July 15, 2025): Enabled full production SMS delivery to all users. Removed testing restrictions so daily questions are now sent to all active users at their preferred times. Disabled testing scheduler (5-minute intervals) and kept production scheduler (hourly checks). System now fully operational for all registered users.
 - **Custom Admin Authentication System** (July 15, 2025): Replaced Google OAuth with secure username/password authentication. Implemented session-based authentication with encrypted password storage using scrypt. Admin credentials: username "adminadmin123", password "YaallaH100%.". System includes proper session management, login/logout functionality, and secure admin route protection.
 - **Daily Quiz Scheduler Debugging** (July 13, 2025): Fixed timezone handling and scheduler delivery issues. Root cause: User's last_quiz_date was preventing new questions. System now working correctly - Twilio confirms SMS delivery, category rotation functional, scheduler restored to normal operation at 21:00 PST.
 - **Category Rotation System** (July 11, 2025): Implemented proper single-category-per-day rotation system ensuring only one question from one category daily, using questionsAnswered % categoryCount for fair rotation.

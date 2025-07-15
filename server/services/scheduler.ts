@@ -12,11 +12,11 @@ export class SchedulerService {
       await this.sendDailyQuestions();
     });
     
-    // For testing: run every 5 minutes to test the system
-    cron.schedule('*/5 * * * *', async () => {
-      console.log('🧪 Testing scheduler - checking for users needing questions...');
-      await this.sendDailyQuestions();
-    });
+    // For testing: run every 5 minutes to test the system (disabled in production)
+    // cron.schedule('*/5 * * * *', async () => {
+    //   console.log('🧪 Testing scheduler - checking for users needing questions...');
+    //   await this.sendDailyQuestions();
+    // });
 
     console.log('Scheduler service initialized');
   }
@@ -75,13 +75,8 @@ export class SchedulerService {
             userToday.setHours(0, 0, 0, 0);
             
             if (!user.lastQuizDate || new Date(user.lastQuizDate) < userToday) {
-              // For testing, only include our test phone number
-              if (user.phoneNumber === '+15153570454') {
-                console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
-                usersToSend.push(user);
-              } else {
-                console.log(`🔕 Skipping user ${user.phoneNumber} (testing mode - only sending to +15153570454)`);
-              }
+              console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
+              usersToSend.push(user);
             } else {
               console.log(`⏭️  User ${user.phoneNumber} already received today's question`);
             }
