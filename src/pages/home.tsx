@@ -29,7 +29,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-background shadow-sm border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
@@ -42,18 +42,45 @@ export default function Home() {
               <a
                 href="#features"
                 className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById('features');
+                  if (element) {
+                    const offset = 80; // Account for fixed header
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
+                  }
+                }}
               >
                 Features
               </a>
               <a
                 href="#pricing"
                 className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById('pricing');
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
+                  }
+                }}
               >
                 Pricing
               </a>
               <a
                 href="#demo"
                 className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById('demo');
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
+                  }
+                }}
               >
                 Demo
               </a>
@@ -63,7 +90,7 @@ export default function Home() {
       </header>
 
       {/* Hero Section */}
-      <section className="gradient-hero py-16 sm:py-24">
+      <section className="gradient-hero py-16 sm:py-24 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
@@ -87,9 +114,11 @@ export default function Home() {
                 variant="outline"
                 size="lg"
                 onClick={() => {
-                  const demoSection = document.getElementById("demo");
-                  if (demoSection) {
-                    demoSection.scrollIntoView({ behavior: "smooth" });
+                  const element = document.getElementById("demo");
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
                   }
                 }}
               >
