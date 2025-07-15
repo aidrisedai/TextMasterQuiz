@@ -246,6 +246,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Phone number is required" });
       }
 
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Check for existing pending answers before sending
+      const userAnswers = await storage.getUserAnswers(user.id, 100);
+      const pendingAnswers = userAnswers.filter(answer => answer.userAnswer === null);
+      
+      if (pendingAnswers.length > 0) {
+        return res.status(400).json({ 
+          message: `User has ${pendingAnswers.length} pending answer(s). Cannot send duplicate question.` 
+        });
+      }
+
       await schedulerService.sendQuestionNow(phoneNumber);
       res.json({ message: "Question sent successfully" });
     } catch (error: any) {

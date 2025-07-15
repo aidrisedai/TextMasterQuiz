@@ -97,8 +97,15 @@ export class SchedulerService {
     try {
       console.log(`📤 Sending daily question to user ${user.id} (${user.phoneNumber})`);
       
-      // Get questions this user has already answered
+      // CRITICAL: Check for pending answers first to prevent duplicate questions
       const userAnswers = await storage.getUserAnswers(user.id, 1000);
+      const pendingAnswers = userAnswers.filter(answer => answer.userAnswer === null);
+      
+      if (pendingAnswers.length > 0) {
+        console.log(`⚠️  User ${user.phoneNumber} already has ${pendingAnswers.length} pending answer(s). Skipping question send.`);
+        return;
+      }
+      
       const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
       
       // Select ONE category for today's question (rotate through user preferences)
@@ -155,6 +162,11 @@ export class SchedulerService {
           pointsEarned: 0, // Will be updated when user responds
         });
         
+        // Update user's lastQuizDate to prevent duplicate questions in same day
+        await storage.updateUser(user.id, {
+          lastQuizDate: new Date()
+        });
+        
         console.log(`✅ Sent daily question #${questionNumber} to user ${user.id} and created pending answer record`);
       } else {
         console.log('❌ No question available to send');
@@ -162,14 +174,9 @@ export class SchedulerService {
     } catch (error) {
       console.error('Error in sendQuestionToUser:', error);
       
-      // Fallback: send a simple test question via SMS
-      const fallbackMessage = {
-        to: user.phoneNumber,
-        body: `🧠 Daily Question: What is the largest planet in our solar system?\n\nA) Earth\nB) Jupiter\nC) Saturn\nD) Mars\n\nReply with A, B, C, or D`
-      };
-      
-      await twilioService.sendSMS(fallbackMessage);
-      console.log(`📨 Sent fallback question to user ${user.id}`);
+      // REMOVED: Fallback mechanism to prevent duplicate questions
+      // Instead, log the error and skip sending to avoid duplicates
+      console.log(`❌ Skipping question send to user ${user.id} due to error to prevent duplicates`);
     }
   }
 
