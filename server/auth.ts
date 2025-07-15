@@ -3,6 +3,19 @@ import { Strategy as GoogleStrategy } from 'passport-google-oauth20';
 import type { Express } from 'express';
 import session from 'express-session';
 
+// Extend the session interface to include adminUser
+declare module 'express-session' {
+  interface SessionData {
+    adminUser?: {
+      id: number;
+      username: string;
+      name: string;
+      email: string;
+      isAdmin: boolean;
+    };
+  }
+}
+
 // In a real application, store these in environment variables
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID || 'your-google-client-id';
 const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET || 'your-google-client-secret';
