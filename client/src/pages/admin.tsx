@@ -140,22 +140,6 @@ export default function AdminPage() {
       });
     }
   };
-    try {
-      await fetch('/api/auth/logout', { method: 'POST' });
-      setAuthStatus({ authenticated: false });
-      toast({
-        title: "Logged out",
-        description: "You have been successfully logged out.",
-      });
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast({
-        title: "Error",
-        description: "Failed to logout",
-        variant: "destructive"
-      });
-    }
-  };
 
   const fetchQuestions = async (category?: string) => {
     try {
