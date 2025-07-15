@@ -7,7 +7,7 @@ import { schedulerService } from "./services/scheduler";
 import { adminRoutes } from "./routes-admin.js";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
-import { setupAuth } from "./auth.js";
+import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
@@ -49,8 +49,16 @@ async function ensureDefaultAdmin() {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup authentication
-  setupAuth(app);
+  // Setup session middleware (no Google OAuth)
+  app.use(session({
+    secret: process.env.SESSION_SECRET || 'your-session-secret',
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 24 * 60 * 60 * 1000 // 24 hours
+    }
+  }));
   
   // Initialize scheduler
   schedulerService.init();
