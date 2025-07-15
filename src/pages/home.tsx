@@ -39,7 +39,7 @@ export default function Home() {
       {/* Hero Section */}
       <section className="gradient-hero py-16 sm:py-24">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
+          <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
               Daily Trivia<br />
               <span className="text-primary">Via SMS</span>
@@ -47,29 +47,25 @@ export default function Home() {
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
               One engaging trivia question delivered to your phone every day. No app required - just text back A, B, C, or D!
             </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button 
-                size="lg"
-                className="btn-primary"
-                onClick={scrollToSignup}
-              >
-                <Phone className="mr-2 h-4 w-4" />
-                Start Playing Today
-              </Button>
-              <Button 
-                variant="outline"
-                size="lg"
-                onClick={() => {
-                  const demoSection = document.getElementById('demo');
-                  if (demoSection) {
-                    demoSection.scrollIntoView({ behavior: 'smooth' });
-                  }
-                }}
-              >
-                <Trophy className="mr-2 h-4 w-4" />
-                See How It Works
-              </Button>
-            </div>
+            <Button 
+              variant="outline"
+              size="lg"
+              onClick={() => {
+                const demoSection = document.getElementById('demo');
+                if (demoSection) {
+                  demoSection.scrollIntoView({ behavior: 'smooth' });
+                }
+              }}
+              className="mb-12"
+            >
+              <Trophy className="mr-2 h-4 w-4" />
+              See How It Works
+            </Button>
+          </div>
+          
+          {/* Signup Form directly in hero */}
+          <div className="max-w-2xl mx-auto">
+            <SignupForm />
           </div>
         </div>
       </section>
@@ -276,27 +272,31 @@ export default function Home() {
               </div>
               
               <div className="bg-muted/50 rounded-lg p-6">
-                <h4 className="font-semibold text-foreground mb-2">Try it yourself!</h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Sign up below and you'll receive your first question tomorrow at your preferred time.
+                <h4 className="font-semibold text-foreground mb-2">Ready to start?</h4>
+                <p className="text-sm text-muted-foreground">
+                  The signup form is right at the top of the page - just scroll up to get started!
                 </p>
-                <Button 
-                  onClick={scrollToSignup}
-                  className="w-full"
-                >
-                  <Phone className="mr-2 h-4 w-4" />
-                  Get Started Now
-                </Button>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Signup Form Section */}
+      {/* Signup Form Section (now in hero) */}
       <section className="py-16 bg-muted/30" id="signup">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <SignupForm />
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">Ready to Play?</h2>
+          <p className="text-muted-foreground mb-8">
+            The signup form is at the top of the page - scroll up to get started with your daily trivia journey!
+          </p>
+          <Button 
+            onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+            size="lg"
+            className="btn-primary"
+          >
+            <Phone className="mr-2 h-4 w-4" />
+            Scroll to Sign Up
+          </Button>
         </div>
       </section>
 
