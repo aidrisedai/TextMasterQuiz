@@ -106,6 +106,7 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+- **Category Standardization & UX Improvements** (July 15, 2025): Fixed category naming inconsistencies by merging "Sports"/"sports" and "Science"/"science" into standardized lowercase versions. Updated signup form to use consistent category names with user-friendly labels. Moved signup form directly into hero section to reduce clicks and improve conversion.
 - **Critical SMS Answer Validation Fix** (July 15, 2025): Fixed major bug in answer processing that was using random chance (70%) instead of actual answer validation. System now properly compares user answers against real question answers, updates user statistics correctly, and provides accurate feedback. Implemented pending answer tracking system and proper streak calculations.
 - **Production SMS Deployment** (July 15, 2025): Enabled full production SMS delivery to all users. Removed testing restrictions so daily questions are now sent to all active users at their preferred times. Disabled testing scheduler (5-minute intervals) and kept production scheduler (hourly checks). System now fully operational for all registered users.
 - **Custom Admin Authentication System** (July 15, 2025): Replaced Google OAuth with secure username/password authentication. Implemented session-based authentication with encrypted password storage using scrypt. Admin credentials: username "adminadmin123", password "YaallaH100%.". System includes proper session management, login/logout functionality, and secure admin route protection.
