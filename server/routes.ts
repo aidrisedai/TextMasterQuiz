@@ -8,6 +8,8 @@ import { adminRoutes } from "./routes-admin.js";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import { setupAuth } from "./auth.js";
+import { scrypt, randomBytes, timingSafeEqual } from "crypto";
+import { promisify } from "util";
 
 const signupSchema = insertUserSchema.extend({
   terms: z.boolean().refine(val => val === true, {
@@ -15,12 +17,46 @@ const signupSchema = insertUserSchema.extend({
   })
 });
 
+const scryptAsync = promisify(scrypt);
+
+async function hashPassword(password: string): Promise<string> {
+  const salt = randomBytes(16).toString("hex");
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return `${buf.toString("hex")}.${salt}`;
+}
+
+async function comparePasswords(supplied: string, stored: string): Promise<boolean> {
+  const [hashed, salt] = stored.split(".");
+  const hashedBuf = Buffer.from(hashed, "hex");
+  const suppliedBuf = (await scryptAsync(supplied, salt, 64)) as Buffer;
+  return timingSafeEqual(hashedBuf, suppliedBuf);
+}
+
+// Create default admin user if it doesn't exist
+async function ensureDefaultAdmin() {
+  const existingAdmin = await storage.getAdminByUsername("adminadmin123");
+  if (!existingAdmin) {
+    const hashedPassword = await hashPassword("YaallaH100%.");
+    await storage.createAdmin({
+      username: "adminadmin123",
+      password: hashedPassword,
+      name: "Administrator",
+      email: "admin@text4quiz.com",
+      isActive: true,
+    });
+    console.log("Default admin user created");
+  }
+}
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication
   setupAuth(app);
   
   // Initialize scheduler
   schedulerService.init();
+  
+  // Ensure default admin user exists
+  await ensureDefaultAdmin();
 
   // User signup
   app.post("/api/signup", async (req, res) => {
@@ -230,8 +266,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin authentication routes
+  app.get("/api/auth/status", (req, res) => {
+    const adminUser = req.session?.adminUser;
+    if (adminUser) {
+      res.json({
+        authenticated: true,
+        user: {
+          id: adminUser.id,
+          name: adminUser.name,
+          email: adminUser.email,
+          isAdmin: true,
+        }
+      });
+    } else {
+      res.json({ authenticated: false });
+    }
+  });
+
+  app.post("/api/auth/login", async (req, res) => {
+    try {
+      const { username, password } = req.body;
+      
+      if (!username || !password) {
+        return res.status(400).json({ message: "Username and password are required" });
+      }
+
+      const admin = await storage.getAdminByUsername(username);
+      if (!admin || !admin.isActive) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      const isValidPassword = await comparePasswords(password, admin.password);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Invalid credentials" });
+      }
+
+      // Update last login
+      await storage.updateAdminLastLogin(admin.id);
+
+      // Store admin in session
+      req.session.adminUser = {
+        id: admin.id,
+        username: admin.username,
+        name: admin.name,
+        email: admin.email,
+        isAdmin: true,
+      };
+
+      res.json({
+        message: "Login successful",
+        user: {
+          id: admin.id,
+          name: admin.name,
+          email: admin.email,
+          isAdmin: true,
+        }
+      });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Login failed" });
+    }
+  });
+
+  app.post("/api/auth/logout", (req, res) => {
+    req.session.adminUser = null;
+    res.json({ message: "Logout successful" });
+  });
+
+  // Admin middleware for protected routes
+  const requireAdmin = (req: any, res: any, next: any) => {
+    if (!req.session?.adminUser) {
+      return res.status(401).json({ message: "Admin authentication required" });
+    }
+    next();
+  };
+
   // Admin routes for question management
-  app.use("/api/admin", adminRoutes);
+  app.use("/api/admin", requireAdmin, adminRoutes);
   
   // Test routes for SMS commands
   const testRoutes = await import('./routes-test.js');

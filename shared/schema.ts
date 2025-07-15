@@ -45,6 +45,17 @@ export const userAnswers = pgTable("user_answers", {
   pointsEarned: integer("points_earned").notNull().default(0),
 });
 
+export const adminUsers = pgTable("admin_users", {
+  id: serial("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  password: text("password").notNull(),
+  name: text("name").notNull(),
+  email: text("email"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  lastLogin: timestamp("last_login"),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   answers: many(userAnswers),
 }));
@@ -75,13 +86,19 @@ export const insertUserSchema = createInsertSchema(users).omit({
 
 export const insertQuestionSchema = createInsertSchema(questions).omit({
   id: true,
-  createdDate: true,
   usageCount: true,
+  createdDate: true,
 });
 
 export const insertUserAnswerSchema = createInsertSchema(userAnswers).omit({
   id: true,
   answeredAt: true,
+});
+
+export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
+  id: true,
+  createdAt: true,
+  lastLogin: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -90,3 +107,5 @@ export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type Question = typeof questions.$inferSelect;
 export type InsertUserAnswer = z.infer<typeof insertUserAnswerSchema>;
 export type UserAnswer = typeof userAnswers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsers.$inferSelect;

@@ -1,4 +1,4 @@
-import { users, questions, userAnswers, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer } from "@shared/schema";
+import { users, questions, userAnswers, adminUsers, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lt } from "drizzle-orm";
 
@@ -27,6 +27,11 @@ export interface IStorage {
     questionsAnswered: number;
     accuracyRate: number;
   }>;
+  
+  // Admin methods
+  getAdminByUsername(username: string): Promise<AdminUser | undefined>;
+  createAdmin(admin: InsertAdminUser): Promise<AdminUser>;
+  updateAdminLastLogin(id: number): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -193,6 +198,26 @@ export class DatabaseStorage implements IStorage {
       questionsAnswered: user.questionsAnswered,
       accuracyRate,
     };
+  }
+
+  async getAdminByUsername(username: string): Promise<AdminUser | undefined> {
+    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    return admin || undefined;
+  }
+
+  async createAdmin(insertAdmin: InsertAdminUser): Promise<AdminUser> {
+    const [admin] = await db
+      .insert(adminUsers)
+      .values(insertAdmin)
+      .returning();
+    return admin;
+  }
+
+  async updateAdminLastLogin(id: number): Promise<void> {
+    await db
+      .update(adminUsers)
+      .set({ lastLogin: new Date() })
+      .where(eq(adminUsers.id, id));
   }
 }
 
