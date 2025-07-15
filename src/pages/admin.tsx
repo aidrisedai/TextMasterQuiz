@@ -55,6 +55,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState<QuestionStats>({ totalQuestions: 0, categories: {} });
   const [isLoading, setIsLoading] = useState(true);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState<string>('questions');
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -414,7 +415,7 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="questions" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="questions">Questions</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -519,7 +520,10 @@ export default function AdminPage() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setActiveTab('questions');
+                        }}
                       >
                         View
                       </Button>
