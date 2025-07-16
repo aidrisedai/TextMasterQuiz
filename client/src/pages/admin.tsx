@@ -415,7 +415,7 @@ export default function AdminPage() {
         </Card>
       </div>
 
-      <Tabs defaultValue="questions" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2">
           <TabsTrigger value="questions">Questions</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -520,7 +520,10 @@ export default function AdminPage() {
                       <Button 
                         size="sm" 
                         variant="outline"
-                        onClick={() => setSelectedCategory(category)}
+                        onClick={() => {
+                          setSelectedCategory(category);
+                          setActiveTab('questions');
+                        }}
                       >
                         View
                       </Button>

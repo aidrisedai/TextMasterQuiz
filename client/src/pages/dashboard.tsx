@@ -1,12 +1,13 @@
+import * as React from "react";
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { StatsCard } from "@/components/stats-card";
-import { Skeleton } from "@/components/ui/skeleton";
-import { api } from "@/lib/api";
+import { Button } from "../components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { Input } from "../components/ui/input";
+import { Label } from "../components/ui/label";
+import { StatsCard } from "../components/stats-card";
+import { Skeleton } from "../components/ui/skeleton";
+import { api } from "../lib/api";
 import { Flame, Trophy, Target, Percent, MessageCircle, Settings, ArrowLeft } from "lucide-react";
 import { Link } from "wouter";
 

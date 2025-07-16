@@ -1,7 +1,8 @@
+import * as React from "react";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import { SignupForm } from "@/components/signup-form";
+import { Button } from "../components/ui/button";
+import { Card, CardContent } from "../components/ui/card";
+import { SignupForm } from "../components/signup-form";
 import {
   MessageCircle,
   Users,
@@ -19,13 +20,16 @@ export default function Home() {
   const [showSignup, setShowSignup] = useState(false);
 
   const scrollToSignup = () => {
-    window.scrollTo({ top: 0, behavior: "smooth" });
+    const signupSection = document.getElementById("signup");
+    if (signupSection) {
+      signupSection.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-background shadow-sm border-b border-border">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-background shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center py-4">
             <div className="flex items-center space-x-2">
@@ -38,13 +42,51 @@ export default function Home() {
               <a
                 href="#features"
                 className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById("features");
+                  if (element) {
+                    const offset = 80; // Account for fixed header
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({
+                      top: elementPosition,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
               >
                 Features
               </a>
-              {/* <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a> */}
+              {/*<a
+                href="#pricing"
+                className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById('pricing');
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
+                  }
+                }}
+              >
+                Pricing
+              </a>*/}
               <a
                 href="#demo"
                 className="text-muted-foreground hover:text-primary transition-colors"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const element = document.getElementById("demo");
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({
+                      top: elementPosition,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
               >
                 Demo
               </a>
@@ -53,8 +95,8 @@ export default function Home() {
         </div>
       </header>
 
-      {/* Hero Section with Signup Form */}
-      <section className="gradient-hero py-16 sm:py-24">
+      {/* Hero Section */}
+      <section className="gradient-hero py-16 sm:py-24 pt-32">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
             <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold text-foreground mb-6">
@@ -69,8 +111,30 @@ export default function Home() {
           </div>
 
           {/* Signup Form directly in hero */}
-          <div className="max-w-4xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             <SignupForm />
+
+            {/* See How It Works button below the form */}
+            <div className="text-center mt-8">
+              <Button
+                variant="outline"
+                size="lg"
+                onClick={() => {
+                  const element = document.getElementById("demo");
+                  if (element) {
+                    const offset = 80;
+                    const elementPosition = element.offsetTop - offset;
+                    window.scrollTo({
+                      top: elementPosition,
+                      behavior: "smooth",
+                    });
+                  }
+                }}
+              >
+                <Trophy className="mr-2 h-4 w-4" />
+                See How It Works
+              </Button>
+            </div>
           </div>
         </div>
       </section>
@@ -344,23 +408,40 @@ export default function Home() {
 
               <div className="bg-muted/50 rounded-lg p-6">
                 <h4 className="font-semibold text-foreground mb-2">
-                  Try it yourself!
+                  Ready to start?
                 </h4>
-                <p className="text-sm text-muted-foreground mb-4">
-                  Sign up at the top of the page and you'll receive your first
-                  question tomorrow at your preferred time.
+                <p className="text-sm text-muted-foreground">
+                  The signup form is right at the top of the page - just scroll
+                  up to get started!
                 </p>
-                <Button onClick={scrollToSignup} className="w-full">
-                  <Phone className="mr-2 h-4 w-4" />
-                  Back to Sign Up
-                </Button>
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Pricing Section
+      {/* Signup Form Section (now in hero) */}
+      <section className="py-16 bg-muted/30" id="signup">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+          <h2 className="text-3xl font-bold text-foreground mb-4">
+            Ready to Play?
+          </h2>
+          <p className="text-muted-foreground mb-8">
+            The signup form is at the top of the page - scroll up to get started
+            with your daily trivia journey!
+          </p>
+          <Button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            size="lg"
+            className="btn-primary"
+          >
+            <Phone className="mr-2 h-4 w-4" />
+            Back to Top
+          </Button>
+        </div>
+      </section>
+
+      {/* Pricing Section 
       <section className="py-16 bg-background" id="pricing">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -373,7 +454,7 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            Free Plan
+            
             <Card>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
@@ -405,7 +486,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            Premium Plan
+            
             <Card className="border-2 border-primary relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                 <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
@@ -453,7 +534,8 @@ export default function Home() {
             </p>
           </div>
         </div>
-      </section> */}
+      </section>
+      */}
 
       {/* SMS Commands Section */}
       <section className="py-16 bg-muted/30">
@@ -558,20 +640,20 @@ export default function Home() {
                     How it Works
                   </a>
                 </li>
-                {/* <li>
+                <li>
                   <a
                     href="#pricing"
                     className="hover:text-background transition-colors"
                   >
                     Pricing
                   </a>
-                </li> */}
+                </li>
                 <li>
                   <a
-                    href="#signup"
+                    href="#demo"
                     className="hover:text-background transition-colors"
                   >
-                    Sign Up
+                    Demo
                   </a>
                 </li>
               </ul>
@@ -580,14 +662,6 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-background/70">
-                {/* <li>
-                  <a
-                    href="#"
-                    className="hover:text-background transition-colors"
-                  >
-                    FAQ
-                  </a>
-                </li> */}
                 <li>
                   <a
                     href="#"

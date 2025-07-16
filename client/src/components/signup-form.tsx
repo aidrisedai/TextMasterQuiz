@@ -1,15 +1,16 @@
+import * as React from "react";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Button } from "@/components/ui/button";
+import { Button } from "./ui/button";
 import {
   Card,
   CardContent,
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
+} from "./ui/card";
 import {
   Form,
   FormControl,
@@ -17,19 +18,19 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
-} from "@/components/ui/form";
+} from "./ui/form";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select";
-import { Checkbox } from "@/components/ui/checkbox";
+} from "./ui/select";
+import { Checkbox } from "./ui/checkbox";
 import { PhoneInput } from "./phone-input";
-import { useToast } from "@/hooks/use-toast";
+import { useToast } from "../hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
-import { api } from "@/lib/api";
+import { api } from "../lib/api";
 import { Rocket, Loader2, Globe } from "lucide-react";
 
 const signupSchema = z.object({
@@ -47,14 +48,15 @@ const signupSchema = z.object({
 type SignupFormData = z.infer<typeof signupSchema>;
 
 const categories = [
-  "Science",
-  "History",
-  "Sports",
-  "Movies",
-  "Geography",
-  "Literature",
-  "Music",
-  "Art",
+  { value: "science", label: "Science" },
+  { value: "history", label: "History" },
+  { value: "sports", label: "Sports" },
+  { value: "general", label: "General Knowledge" },
+  { value: "geography", label: "Geography" },
+  { value: "literature", label: "Literature" },
+  { value: "arts", label: "Arts" },
+  { value: "technology", label: "Technology" },
+  { value: "physics", label: "Physics" },
 ];
 
 const timeOptions = [
@@ -156,9 +158,7 @@ export function SignupForm() {
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl">Join Text4Quiz</CardTitle>
-        <CardDescription>
-          Start your daily trivia journey in 30 seconds
-        </CardDescription>
+        <CardDescription>Get started in 30 seconds</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
@@ -257,34 +257,33 @@ export function SignupForm() {
                   <div className="grid grid-cols-2 gap-3">
                     {categories.map((category) => (
                       <FormField
-                        key={category}
+                        key={category.value}
                         control={form.control}
                         name="categoryPreferences"
                         render={({ field }) => {
                           return (
-                            <FormItem
-                              key={category}
-                              className="flex flex-row items-start space-x-3 space-y-0"
-                            >
+                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
                               <FormControl>
                                 <Checkbox
-                                  checked={field.value?.includes(category)}
+                                  checked={field.value?.includes(
+                                    category.value,
+                                  )}
                                   onCheckedChange={(checked) => {
                                     return checked
                                       ? field.onChange([
                                           ...field.value,
-                                          category,
+                                          category.value,
                                         ])
                                       : field.onChange(
                                           field.value?.filter(
-                                            (value) => value !== category,
+                                            (value) => value !== category.value,
                                           ),
                                         );
                                   }}
                                 />
                               </FormControl>
                               <FormLabel className="text-sm font-normal cursor-pointer">
-                                {category}
+                                {category.label}
                               </FormLabel>
                             </FormItem>
                           );
