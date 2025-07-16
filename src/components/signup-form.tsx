@@ -51,11 +51,11 @@ const categories = [
   { value: "science", label: "Science" },
   { value: "history", label: "History" },
   { value: "sports", label: "Sports" },
-  { value: "general", label: "General Knowledge" },
+  { value: "technology", label: "Technology" },
   { value: "geography", label: "Geography" },
   { value: "literature", label: "Literature" },
   { value: "arts", label: "Arts" },
-  { value: "technology", label: "Technology" },
+  { value: "general", label: "General Knowledge" },
   { value: "physics", label: "Physics" },
 ];
 
