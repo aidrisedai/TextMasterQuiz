@@ -659,7 +659,7 @@ export default function Home() {
                     href="#"
                     className="hover:text-background transition-colors"
                   >
-                    Contact Us
+                    email@text4quiz.com
                   </a>
                 </li>
                 <li>
