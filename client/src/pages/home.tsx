@@ -642,14 +642,6 @@ export default function Home() {
                 </li>
                 <li>
                   <a
-                    href="#pricing"
-                    className="hover:text-background transition-colors"
-                  >
-                    Pricing
-                  </a>
-                </li>
-                <li>
-                  <a
                     href="#demo"
                     className="hover:text-background transition-colors"
                   >
