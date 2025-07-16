@@ -1,6 +1,7 @@
-import * as React from "react";
-import { createRoot } from "react-dom/client";
-import App from "./App-simple";
-import "./index.css";
-
-createRoot(document.getElementById("root")!).render(<App />);
+// Simple test without React
+document.addEventListener('DOMContentLoaded', () => {
+  const root = document.getElementById('root');
+  if (root) {
+    root.innerHTML = '<h1 style="color: red; font-size: 24px;">Test - JavaScript is working!</h1>';
+  }
+});
