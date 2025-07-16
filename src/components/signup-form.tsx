@@ -347,8 +347,8 @@ export function SignupForm() {
 
         <div className="text-center mt-6">
           <p className="text-sm text-muted-foreground">
-            Always free. Premium plan coming soon. Cancel anytime by texting
-            "STOP"
+            Always free. US-based phone numbers only. Premium plan coming soon.
+            Cancel anytime by texting "STOP"
           </p>
         </div>
       </CardContent>

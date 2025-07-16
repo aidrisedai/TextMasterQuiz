@@ -41,12 +41,7 @@ export default function Home() {
               >
                 Features
               </a>
-              <a
-                href="#pricing"
-                className="text-muted-foreground hover:text-primary transition-colors"
-              >
-                Pricing
-              </a>
+              {/* <a href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">Pricing</a> */}
               <a
                 href="#demo"
                 className="text-muted-foreground hover:text-primary transition-colors"
@@ -68,8 +63,8 @@ export default function Home() {
               <span className="text-primary">Via SMS</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              One engaging trivia question delivered to your phone every day. No
-              app required - just text back A, B, C, or D!
+              One engaging trivia question delivered to your phone every day.
+              Just reply A, B, C, or D! No App required.
             </p>
           </div>
 
@@ -365,7 +360,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Pricing Section */}
+      {/* Pricing Section
       <section className="py-16 bg-background" id="pricing">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="text-center mb-12">
@@ -378,7 +373,7 @@ export default function Home() {
           </div>
 
           <div className="grid md:grid-cols-2 gap-8 max-w-2xl mx-auto">
-            {/* Free Plan */}
+            Free Plan
             <Card>
               <CardContent className="p-8">
                 <div className="text-center mb-6">
@@ -410,7 +405,7 @@ export default function Home() {
               </CardContent>
             </Card>
 
-            {/* Premium Plan */}
+            Premium Plan
             <Card className="border-2 border-primary relative">
               <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
                 <span className="bg-primary text-primary-foreground px-4 py-1 rounded-full text-sm font-medium">
@@ -458,7 +453,7 @@ export default function Home() {
             </p>
           </div>
         </div>
-      </section>
+      </section> */}
 
       {/* SMS Commands Section */}
       <section className="py-16 bg-muted/30">
@@ -563,20 +558,20 @@ export default function Home() {
                     How it Works
                   </a>
                 </li>
-                <li>
+                {/* <li>
                   <a
                     href="#pricing"
                     className="hover:text-background transition-colors"
                   >
                     Pricing
                   </a>
-                </li>
+                </li> */}
                 <li>
                   <a
-                    href="#demo"
+                    href="#signup"
                     className="hover:text-background transition-colors"
                   >
-                    Demo
+                    Sign Up
                   </a>
                 </li>
               </ul>
@@ -585,14 +580,14 @@ export default function Home() {
             <div>
               <h4 className="font-semibold mb-4">Support</h4>
               <ul className="space-y-2 text-background/70">
-                <li>
+                {/* <li>
                   <a
                     href="#"
                     className="hover:text-background transition-colors"
                   >
                     FAQ
                   </a>
-                </li>
+                </li> */}
                 <li>
                   <a
                     href="#"

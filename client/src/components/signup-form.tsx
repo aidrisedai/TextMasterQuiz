@@ -3,9 +3,28 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { PhoneInput } from "./phone-input";
 import { useToast } from "@/hooks/use-toast";
@@ -17,23 +36,25 @@ const signupSchema = z.object({
   phoneNumber: z.string().min(1, "Phone number is required"),
   preferredTime: z.string().min(1, "Please select a preferred time"),
   timezone: z.string().min(1, "Please select your timezone"),
-  categoryPreferences: z.array(z.string()).min(1, "Please select at least one category"),
-  terms: z.boolean().refine(val => val === true, {
-    message: "You must accept the terms and conditions"
-  })
+  categoryPreferences: z
+    .array(z.string())
+    .min(1, "Please select at least one category"),
+  terms: z.boolean().refine((val) => val === true, {
+    message: "You must accept the terms and conditions",
+  }),
 });
 
 type SignupFormData = z.infer<typeof signupSchema>;
 
 const categories = [
   "Science",
-  "History", 
+  "History",
   "Sports",
   "Movies",
   "Geography",
   "Literature",
   "Music",
-  "Art"
+  "Art",
 ];
 
 const timeOptions = [
@@ -42,7 +63,7 @@ const timeOptions = [
   { value: "12:00", label: "12:00 PM - Lunch Break" },
   { value: "15:00", label: "3:00 PM - Afternoon" },
   { value: "18:00", label: "6:00 PM - Evening" },
-  { value: "21:00", label: "9:00 PM - Night Owl" }
+  { value: "21:00", label: "9:00 PM - Night Owl" },
 ];
 
 const timezoneOptions = [
@@ -59,7 +80,7 @@ const timezoneOptions = [
   { value: "Europe/Paris", label: "Paris (CET/CEST)" },
   { value: "Europe/Berlin", label: "Berlin (CET/CEST)" },
   { value: "Asia/Tokyo", label: "Tokyo (JST)" },
-  { value: "Australia/Sydney", label: "Sydney (AEST/AEDT)" }
+  { value: "Australia/Sydney", label: "Sydney (AEST/AEDT)" },
 ];
 
 export function SignupForm() {
@@ -73,8 +94,8 @@ export function SignupForm() {
       preferredTime: "",
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       categoryPreferences: [],
-      terms: false
-    }
+      terms: false,
+    },
   });
 
   const signupMutation = useMutation({
@@ -83,7 +104,8 @@ export function SignupForm() {
       setIsSuccess(true);
       toast({
         title: "Welcome to Text4Quiz!",
-        description: "You'll receive your first question tomorrow at your preferred time.",
+        description:
+          "You'll receive your first question tomorrow at your preferred time.",
       });
     },
     onError: (error: any) => {
@@ -92,7 +114,7 @@ export function SignupForm() {
         description: error.message || "Something went wrong. Please try again.",
         variant: "destructive",
       });
-    }
+    },
   });
 
   const onSubmit = (data: SignupFormData) => {
@@ -100,10 +122,10 @@ export function SignupForm() {
     const cleanPhone = data.phoneNumber.replace(/\D/g, "");
     if (cleanPhone.length === 10) {
       data.phoneNumber = `+1${cleanPhone}`;
-    } else if (cleanPhone.length === 11 && cleanPhone[0] === '1') {
+    } else if (cleanPhone.length === 11 && cleanPhone[0] === "1") {
       data.phoneNumber = `+${cleanPhone}`;
     }
-    
+
     signupMutation.mutate(data);
   };
 
@@ -117,10 +139,12 @@ export function SignupForm() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Welcome to Text4Quiz!</h2>
             <p className="text-muted-foreground mb-4">
-              You're all set! You'll receive your first trivia question tomorrow at your preferred time.
+              You're all set! You'll receive your first trivia question tomorrow
+              at your preferred time.
             </p>
             <p className="text-sm text-muted-foreground">
-              Remember, you can text "HELP" anytime for commands or "STOP" to unsubscribe.
+              Remember, you can text "HELP" anytime for commands or "STOP" to
+              unsubscribe.
             </p>
           </div>
         </CardContent>
@@ -133,7 +157,7 @@ export function SignupForm() {
       <CardHeader className="text-center">
         <CardTitle className="text-3xl">Join Text4Quiz</CardTitle>
         <CardDescription>
-          Start your daily trivia journey in under 2 minutes
+          Start your daily trivia journey in 30 seconds
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -146,7 +170,10 @@ export function SignupForm() {
                 <FormItem>
                   <FormLabel>Phone Number</FormLabel>
                   <FormControl>
-                    <PhoneInput {...field} error={form.formState.errors.phoneNumber?.message} />
+                    <PhoneInput
+                      {...field}
+                      error={form.formState.errors.phoneNumber?.message}
+                    />
                   </FormControl>
                   <p className="text-sm text-muted-foreground">
                     We'll send your daily trivia questions here
@@ -163,7 +190,10 @@ export function SignupForm() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Preferred Quiz Time</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your preferred time" />
@@ -191,7 +221,10 @@ export function SignupForm() {
                       <Globe className="h-4 w-4" />
                       Your Timezone
                     </FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select
+                      onValueChange={field.onChange}
+                      defaultValue={field.value}
+                    >
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select your timezone" />
@@ -206,7 +239,8 @@ export function SignupForm() {
                       </SelectContent>
                     </Select>
                     <p className="text-sm text-muted-foreground">
-                      Auto-detected: {Intl.DateTimeFormat().resolvedOptions().timeZone}
+                      Auto-detected:{" "}
+                      {Intl.DateTimeFormat().resolvedOptions().timeZone}
                     </p>
                     <FormMessage />
                   </FormItem>
@@ -237,12 +271,15 @@ export function SignupForm() {
                                   checked={field.value?.includes(category)}
                                   onCheckedChange={(checked) => {
                                     return checked
-                                      ? field.onChange([...field.value, category])
+                                      ? field.onChange([
+                                          ...field.value,
+                                          category,
+                                        ])
                                       : field.onChange(
                                           field.value?.filter(
-                                            (value) => value !== category
-                                          )
-                                        )
+                                            (value) => value !== category,
+                                          ),
+                                        );
                                   }}
                                 />
                               </FormControl>
@@ -250,7 +287,7 @@ export function SignupForm() {
                                 {category}
                               </FormLabel>
                             </FormItem>
-                          )
+                          );
                         }}
                       />
                     ))}
@@ -311,7 +348,8 @@ export function SignupForm() {
 
         <div className="text-center mt-6">
           <p className="text-sm text-muted-foreground">
-            Always free. Optional premium features available. Cancel anytime by texting "STOP"
+            Always free. US-based phone numbers only. Premium plan coming soon.
+            Cancel anytime by texting "STOP"
           </p>
         </div>
       </CardContent>
