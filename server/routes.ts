@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
+import { geminiService } from "./services/gemini";
 import { schedulerService } from "./services/scheduler";
 import { adminRoutes } from "./routes-admin.js";
 import { insertUserSchema } from "@shared/schema";
@@ -99,8 +100,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       await twilioService.sendWelcome(user.phoneNumber, `${timeDisplay} (${user.timezone})`);
 
+      // Send immediate welcome quiz question to give users a taste
+      await sendWelcomeQuizQuestion(user);
+
       res.json({ 
-        message: "Successfully signed up for Text4Quiz!",
+        message: "Successfully signed up for Text4Quiz! Check your phone for your first question.",
         user: {
           id: user.id,
           phoneNumber: user.phoneNumber,
@@ -451,6 +455,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test routes for SMS commands
   const testRoutes = await import('./routes-test.js');
   app.use("/api/test", testRoutes.default);
+
+  // Helper function to send welcome quiz question immediately after signup
+  async function sendWelcomeQuizQuestion(user: any) {
+    try {
+      console.log(`🎯 Sending welcome quiz question to new user ${user.phoneNumber}`);
+      
+      // Select first category from user preferences for welcome question
+      const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+        ? user.categoryPreferences 
+        : ['general'];
+      const welcomeCategory = userCategories[0];
+      
+      console.log(`📚 Welcome question category: ${welcomeCategory}`);
+      
+      // Get a random question from their preferred category
+      let question = await storage.getRandomQuestion([welcomeCategory], []);
+      
+      if (!question) {
+        console.log('🤖 No existing questions found, generating new welcome question with AI...');
+        // Generate a new question if none available
+        const generated = await geminiService.generateQuestion(welcomeCategory, 'medium', []);
+        if (generated) {
+          question = await storage.createQuestion(generated);
+          console.log(`✨ Generated new welcome question: ${question.questionText.substring(0, 50)}...`);
+        }
+      }
+
+      if (question) {
+        await storage.incrementQuestionUsage(question.id);
+        
+        // Send the welcome question (this is question #1)
+        await twilioService.sendDailyQuestion(
+          user.phoneNumber,
+          question,
+          1
+        );
+        
+        // Create a pending answer record
+        await storage.recordAnswer({
+          userId: user.id,
+          questionId: question.id,
+          userAnswer: null, // Will be filled when user responds
+          isCorrect: false, // Will be updated when user responds
+          pointsEarned: 0, // Will be updated when user responds
+        });
+        
+        // Set lastQuizDate to today so scheduler won't send another question today
+        // But scheduled delivery will start tomorrow
+        await storage.updateUser(user.id, {
+          lastQuizDate: new Date()
+        });
+        
+        console.log(`✅ Sent welcome question to new user ${user.phoneNumber}`);
+      } else {
+        console.log('❌ No welcome question available to send');
+      }
+    } catch (error) {
+      console.error('Error sending welcome quiz question:', error);
+      // Don't throw error to avoid breaking signup process
+    }
+  }
 
   // Helper function to process answers
   async function processAnswer(user: any, answer: string, phoneNumber: string) {

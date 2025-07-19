@@ -74,7 +74,14 @@ export class SchedulerService {
             const userToday = new Date(userCurrentTime);
             userToday.setHours(0, 0, 0, 0);
             
-            if (!user.lastQuizDate || new Date(user.lastQuizDate) < userToday) {
+            // Check if user joined today (same day) - if so, skip because they got welcome question
+            const joinDate = new Date(user.joinDate);
+            joinDate.setHours(0, 0, 0, 0);
+            const isNewUserToday = joinDate.getTime() === userToday.getTime();
+            
+            if (isNewUserToday) {
+              console.log(`🎯 User ${user.phoneNumber} joined today and already received welcome question. Next question tomorrow.`);
+            } else if (!user.lastQuizDate || new Date(user.lastQuizDate) < userToday) {
               console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
               usersToSend.push(user);
             } else {
