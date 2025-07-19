@@ -502,10 +502,16 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-3">
-          <TabsTrigger value="questions">Questions</TabsTrigger>
-          <TabsTrigger value="users">Users</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-3 h-auto min-h-[44px]">
+          <TabsTrigger value="questions" className="text-sm px-2 py-2 min-w-0 flex-shrink-0">
+            Questions
+          </TabsTrigger>
+          <TabsTrigger value="users" className="text-sm px-2 py-2 min-w-0 flex-shrink-0">
+            Users
+          </TabsTrigger>
+          <TabsTrigger value="categories" className="text-sm px-2 py-2 min-w-0 flex-shrink-0">
+            Categories
+          </TabsTrigger>
         </TabsList>
         
         <TabsContent value="questions" className="space-y-4">
