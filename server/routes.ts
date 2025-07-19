@@ -367,6 +367,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Admin Users endpoint
+  app.get("/api/admin/users", requireAdmin, async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      
+      const usersWithDetails = await Promise.all(allUsers.map(async (user) => {
+        // Get the last question/message sent to this user
+        const recentAnswers = await storage.getUserAnswers(user.id, 1);
+        const lastMessage = recentAnswers.length > 0 ? recentAnswers[0] : null;
+        
+        return {
+          id: user.id,
+          phoneNumber: user.phoneNumber,
+          name: user.phoneNumber, // Use phone number as identifier
+          categories: user.categoryPreferences || [],
+          lastMessageDate: user.lastQuizDate,
+          lastMessageContent: lastMessage ? lastMessage.question.questionText : null,
+          lastQuestionId: lastMessage ? lastMessage.questionId : null,
+          subscriptionStatus: user.subscriptionStatus,
+          isActive: user.isActive,
+          preferredTime: user.preferredTime,
+          timezone: user.timezone,
+          currentStreak: user.currentStreak,
+          totalScore: user.totalScore,
+          questionsAnswered: user.questionsAnswered,
+          correctAnswers: user.correctAnswers,
+          joinDate: user.joinDate
+        };
+      }));
+
+      res.json(usersWithDetails);
+    } catch (error: any) {
+      console.error("Error fetching users:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+
+  // Resend last message endpoint
+  app.post("/api/admin/resend-message", requireAdmin, async (req, res) => {
+    try {
+      const { phoneNumber } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Get the last question sent to this user
+      const recentAnswers = await storage.getUserAnswers(user.id, 1);
+      if (recentAnswers.length === 0) {
+        return res.status(400).json({ message: "No previous message found for this user" });
+      }
+
+      const lastAnswer = recentAnswers[0];
+      const question = lastAnswer.question;
+      
+      if (!question) {
+        return res.status(400).json({ message: "Previous question not found" });
+      }
+
+      // Resend the same question using Twilio service
+      const questionNumber = user.questionsAnswered;
+      await twilioService.sendDailyQuestion(phoneNumber, question, questionNumber);
+
+      res.json({ 
+        message: "Previous message resent successfully",
+        questionText: question.questionText
+      });
+    } catch (error: any) {
+      console.error("Error resending message:", error);
+      res.status(500).json({ message: "Failed to resend message" });
+    }
+  });
+
   // Admin routes for question management
   app.use("/api/admin", requireAdmin, adminRoutes);
   

@@ -35,6 +35,25 @@ interface QuestionStats {
   categories: Record<string, number>;
 }
 
+interface User {
+  id: number;
+  phoneNumber: string;
+  name: string;
+  categories: string[];
+  lastMessageDate: string | null;
+  lastMessageContent: string | null;
+  lastQuestionId: number | null;
+  subscriptionStatus: string;
+  isActive: boolean;
+  preferredTime: string;
+  timezone: string;
+  currentStreak: number;
+  totalScore: number;
+  questionsAnswered: number;
+  correctAnswers: number;
+  joinDate: string;
+}
+
 interface AuthStatus {
   authenticated: boolean;
   user?: {
@@ -53,12 +72,17 @@ const loginSchema = z.object({
 export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<QuestionStats>({ totalQuestions: 0, categories: {} });
+  const [users, setUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [activeTab, setActiveTab] = useState<string>('questions');
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [userFilter, setUserFilter] = useState('');
+  const [sortBy, setSortBy] = useState<'name' | 'date' | 'categories'>('date');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const { toast } = useToast();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -241,6 +265,65 @@ export default function AdminPage() {
     }
   };
 
+  const fetchUsers = async () => {
+    try {
+      setIsUsersLoading(true);
+      const response = await fetch('/api/admin/users');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setUsers(data || []);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to load users",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load users",
+        variant: "destructive"
+      });
+    } finally {
+      setIsUsersLoading(false);
+    }
+  };
+
+  const handleResendMessage = async (phoneNumber: string) => {
+    try {
+      const response = await fetch('/api/admin/resend-message', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ phoneNumber })
+      });
+      
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Message Resent",
+          description: `Previous message sent to ${phoneNumber}`,
+        });
+      } else {
+        toast({
+          title: "Error",
+          description: data.message || "Failed to resend message",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error resending message:', error);
+      toast({
+        title: "Error",
+        description: "Failed to resend message",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     const initializeAuth = async () => {
       const authenticated = await checkAuthStatus();
@@ -255,8 +338,11 @@ export default function AdminPage() {
   useEffect(() => {
     if (authStatus.authenticated) {
       fetchQuestions(selectedCategory);
+      if (activeTab === 'users') {
+        fetchUsers();
+      }
     }
-  }, [selectedCategory, authStatus.authenticated]);
+  }, [selectedCategory, authStatus.authenticated, activeTab]);
 
   const categories = ['all', ...Object.keys(stats.categories)];
 
@@ -416,8 +502,9 @@ export default function AdminPage() {
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="questions">Questions</TabsTrigger>
+          <TabsTrigger value="users">Users</TabsTrigger>
           <TabsTrigger value="categories">Categories</TabsTrigger>
         </TabsList>
         
@@ -495,6 +582,171 @@ export default function AdminPage() {
                         </div>
                       </div>
                     ))}
+                  </div>
+                </ScrollArea>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+        
+        <TabsContent value="users" className="space-y-4">
+          <div className="flex gap-4 items-center">
+            <Input
+              placeholder="Filter by phone number..."
+              value={userFilter}
+              onChange={(e) => setUserFilter(e.target.value)}
+              className="max-w-sm"
+            />
+            <div className="flex gap-2">
+              <Button
+                onClick={() => setSortBy('name')}
+                variant={sortBy === 'name' ? "default" : "outline"}
+                size="sm"
+              >
+                Sort by Phone
+              </Button>
+              <Button
+                onClick={() => setSortBy('date')}
+                variant={sortBy === 'date' ? "default" : "outline"}
+                size="sm"
+              >
+                Sort by Date
+              </Button>
+              <Button
+                onClick={() => setSortBy('categories')}
+                variant={sortBy === 'categories' ? "default" : "outline"}
+                size="sm"
+              >
+                Sort by Categories
+              </Button>
+              <Button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                variant="outline"
+                size="sm"
+              >
+                {sortOrder === 'asc' ? '↑' : '↓'}
+              </Button>
+            </div>
+            <Button onClick={fetchUsers} variant="outline" size="sm">
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh Users
+            </Button>
+          </div>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>User Management ({users.length} users)</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isUsersLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <RefreshCw className="h-6 w-6 animate-spin" />
+                  <span className="ml-2">Loading users...</span>
+                </div>
+              ) : (
+                <ScrollArea className="h-[600px]">
+                  <div className="space-y-4">
+                    {users
+                      .filter(user => 
+                        user.phoneNumber.toLowerCase().includes(userFilter.toLowerCase())
+                      )
+                      .sort((a, b) => {
+                        let aVal, bVal;
+                        switch (sortBy) {
+                          case 'name':
+                            aVal = a.phoneNumber;
+                            bVal = b.phoneNumber;
+                            break;
+                          case 'date':
+                            aVal = a.lastMessageDate || '';
+                            bVal = b.lastMessageDate || '';
+                            break;
+                          case 'categories':
+                            aVal = a.categories.length;
+                            bVal = b.categories.length;
+                            break;
+                          default:
+                            aVal = a.phoneNumber;
+                            bVal = b.phoneNumber;
+                        }
+                        
+                        if (sortBy === 'categories') {
+                          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                        }
+                        
+                        const comparison = aVal.localeCompare(bVal);
+                        return sortOrder === 'asc' ? comparison : -comparison;
+                      })
+                      .map((user) => (
+                        <div key={user.id} className="p-4 border rounded-lg space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-semibold">{user.phoneNumber}</h3>
+                                <Badge variant={user.isActive ? "default" : "secondary"}>
+                                  {user.isActive ? 'Active' : 'Inactive'}
+                                </Badge>
+                                <Badge variant={user.subscriptionStatus === 'active' ? "default" : "outline"}>
+                                  {user.subscriptionStatus}
+                                </Badge>
+                              </div>
+                              
+                              <div className="text-sm text-gray-600 mt-1">
+                                <div>Categories: {user.categories.length > 0 ? user.categories.join(', ') : 'None'}</div>
+                                <div>Preferred Time: {user.preferredTime} ({user.timezone})</div>
+                                <div>Stats: {user.questionsAnswered} answered, {user.currentStreak} streak, {user.totalScore} points</div>
+                                <div>Accuracy: {user.questionsAnswered > 0 ? Math.round((user.correctAnswers / user.questionsAnswered) * 100) : 0}%</div>
+                              </div>
+                            </div>
+                            
+                            <div className="text-right text-sm">
+                              <div className="font-medium">
+                                Last Message: {user.lastMessageDate 
+                                  ? new Date(user.lastMessageDate).toLocaleDateString() 
+                                  : 'Never'}
+                              </div>
+                              <div className="text-xs text-gray-500">
+                                Joined: {new Date(user.joinDate).toLocaleDateString()}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {user.lastMessageContent && (
+                            <div className="bg-gray-50 p-3 rounded text-sm">
+                              <div className="font-medium mb-1">Last Message Content:</div>
+                              <div className="text-gray-700 line-clamp-2">
+                                {user.lastMessageContent}
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="flex gap-2 pt-2">
+                            <Button
+                              onClick={() => handleResendMessage(user.phoneNumber)}
+                              disabled={!user.lastMessageContent}
+                              size="sm"
+                              variant="outline"
+                            >
+                              <MessageSquare className="h-4 w-4 mr-2" />
+                              Resend Previous Message
+                            </Button>
+                            
+                            {!user.isActive && (
+                              <Badge variant="destructive" className="text-xs">
+                                User Stopped Messages
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    
+                    {users.filter(user => 
+                      user.phoneNumber.toLowerCase().includes(userFilter.toLowerCase())
+                    ).length === 0 && (
+                      <div className="text-center py-8 text-gray-500">
+                        No users found matching "{userFilter}"
+                      </div>
+                    )}
                   </div>
                 </ScrollArea>
               )}
