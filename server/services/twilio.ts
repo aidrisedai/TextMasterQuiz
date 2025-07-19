@@ -1,11 +1,14 @@
-import twilio from 'twilio';
+import twilio from "twilio";
 
 const accountSid = process.env.TWILIO_ACCOUNT_SID || process.env.TWILIO_SID;
 const authToken = process.env.TWILIO_AUTH_TOKEN || process.env.TWILIO_TOKEN;
-const phoneNumber = process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER;
+const phoneNumber =
+  process.env.TWILIO_PHONE_NUMBER || process.env.TWILIO_NUMBER;
 
 if (!accountSid || !authToken || !phoneNumber) {
-  console.error('Twilio credentials not found. SMS functionality will not work.');
+  console.error(
+    "Twilio credentials not found. SMS functionality will not work.",
+  );
 }
 
 const client = twilio(accountSid, authToken);
@@ -18,14 +21,14 @@ export interface SMSMessage {
 export class TwilioService {
   async sendSMS(message: SMSMessage): Promise<boolean> {
     if (!accountSid || !authToken || !phoneNumber) {
-      console.log('Missing Twilio credentials - SMS would be sent:', message);
+      console.log("Missing Twilio credentials - SMS would be sent:", message);
       return false;
     }
 
-    console.log('📱 SMS Message Ready:', {
+    console.log("📱 SMS Message Ready:", {
       to: message.to,
       from: phoneNumber,
-      message: message.body
+      message: message.body,
     });
 
     try {
@@ -34,40 +37,55 @@ export class TwilioService {
         from: phoneNumber,
         to: message.to,
       });
-      
+
       console.log(`SMS queued: ${result.sid}`);
-      
+
       // Check delivery status after a delay
       setTimeout(async () => {
         try {
           const status = await client.messages(result.sid).fetch();
-          if (status.status === 'delivered') {
+          if (status.status === "delivered") {
             console.log(`✅ SMS delivered successfully to ${message.to}`);
-          } else if (status.status === 'failed' || status.status === 'undelivered') {
+          } else if (
+            status.status === "failed" ||
+            status.status === "undelivered"
+          ) {
             console.log(`❌ SMS delivery failed to ${message.to}`);
-            console.log(`Status: ${status.status}, Error: ${status.errorCode || 'None'}`);
+            console.log(
+              `Status: ${status.status}, Error: ${status.errorCode || "None"}`,
+            );
             console.log(`📋 Message content: ${message.body}`);
             if (status.errorCode === 30032) {
-              console.log(`💡 Toll-free number verification required - complete verification in Twilio Console`);
-              console.log(`   Visit: https://console.twilio.com/us1/develop/phone-numbers/manage/incoming`);
+              console.log(
+                `💡 Toll-free number verification required - complete verification in Twilio Console`,
+              );
+              console.log(
+                `   Visit: https://console.twilio.com/us1/develop/phone-numbers/manage/incoming`,
+              );
             } else {
-              console.log(`💡 The message would be delivered with proper phone number setup`);
+              console.log(
+                `💡 The message would be delivered with proper phone number setup`,
+              );
             }
           }
         } catch (e) {
           console.log(`📋 SMS content for ${message.to}: ${message.body}`);
         }
       }, 2000);
-      
+
       return true;
     } catch (error: any) {
-      console.error('SMS error:', error.message);
+      console.error("SMS error:", error.message);
       console.log(`📋 Would send to ${message.to}: ${message.body}`);
       return false;
     }
   }
 
-  async sendDailyQuestion(phoneNumber: string, question: any, questionNumber: number): Promise<boolean> {
+  async sendDailyQuestion(
+    phoneNumber: string,
+    question: any,
+    questionNumber: number,
+  ): Promise<boolean> {
     const body = `🧠 Question #${questionNumber}: ${question.questionText}
 
 A) ${question.optionA}
@@ -80,15 +98,24 @@ Reply with A, B, C, or D`;
     return this.sendSMS({ to: phoneNumber, body });
   }
 
-  async sendAnswerFeedback(phoneNumber: string, isCorrect: boolean, correctAnswer: string, explanation: string, streak: number, points: number): Promise<boolean> {
-    const emoji = isCorrect ? '🎉' : '❌';
-    const result = isCorrect ? 'Correct!' : `Incorrect. The answer was ${correctAnswer}.`;
-    
+  async sendAnswerFeedback(
+    phoneNumber: string,
+    isCorrect: boolean,
+    correctAnswer: string,
+    explanation: string,
+    streak: number,
+    points: number,
+  ): Promise<boolean> {
+    const emoji = isCorrect ? "🎉" : "❌";
+    const result = isCorrect
+      ? "Correct!"
+      : `Incorrect. The answer was ${correctAnswer}.`;
+
     const body = `${emoji} ${result}
 
 ${explanation}
 
-Streak: ${streak} days ${streak > 0 ? '🔥' : ''}
+Streak: ${streak} days ${streak > 0 ? "🔥" : ""}
 Score: +${points} points
 
 Text "SCORE" for stats or "HELP" for commands`;
@@ -123,10 +150,14 @@ Questions? Reply with your message.`;
     return this.sendSMS({ to: phoneNumber, body });
   }
 
-  async sendWelcome(phoneNumber: string, preferredTime: string): Promise<boolean> {
+  async sendWelcome(
+    phoneNumber: string,
+    preferredTime: string,
+  ): Promise<boolean> {
     const body = `🎉 Welcome to Text4Quiz!
-
-You'll receive your first trivia question tomorrow at ${preferredTime}.
+    
+You'll receive your first trivia question shortly to get started! 🧠  
+Your next question will arrive tomorrow at ${preferredTime}.
 
 Text "HELP" anytime for commands.
 Text "STOP" to unsubscribe.
