@@ -105,13 +105,15 @@ export class SchedulerService {
       console.log(`📤 Sending daily question to user ${user.id} (${user.phoneNumber})`);
       
       // CRITICAL: Check for pending answers first to prevent duplicate questions
-      const userAnswers = await storage.getUserAnswers(user.id, 1000);
-      const pendingAnswers = userAnswers.filter(answer => answer.userAnswer === null);
+      // Use a more robust check by directly querying the database
+      const pendingAnswersCount = await storage.getPendingAnswersCount(user.id);
       
-      if (pendingAnswers.length > 0) {
-        console.log(`⚠️  User ${user.phoneNumber} already has ${pendingAnswers.length} pending answer(s). Skipping question send.`);
+      if (pendingAnswersCount > 0) {
+        console.log(`⚠️  User ${user.phoneNumber} already has ${pendingAnswersCount} pending answer(s). Skipping question send.`);
         return;
       }
+      
+      const userAnswers = await storage.getUserAnswers(user.id, 1000);
       
       const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
       

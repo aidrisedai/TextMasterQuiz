@@ -1,6 +1,6 @@
 import { users, questions, userAnswers, adminUsers, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lt } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -33,6 +33,9 @@ export interface IStorage {
   getAdminByUsername(username: string): Promise<AdminUser | undefined>;
   createAdmin(admin: InsertAdminUser): Promise<AdminUser>;
   updateAdminLastLogin(id: number): Promise<void>;
+  
+  // Duplicate prevention methods
+  getPendingAnswersCount(userId: number): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -238,6 +241,20 @@ export class DatabaseStorage implements IStorage {
       questionsAnswered: user.questionsAnswered,
       accuracyRate,
     };
+  }
+
+  async getPendingAnswersCount(userId: number): Promise<number> {
+    const result = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(userAnswers)
+      .where(
+        and(
+          eq(userAnswers.userId, userId),
+          isNull(userAnswers.userAnswer)
+        )
+      );
+    
+    return result[0]?.count || 0;
   }
 
   async getAdminByUsername(username: string): Promise<AdminUser | undefined> {
