@@ -104,7 +104,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await sendWelcomeQuizQuestion(user);
 
       res.json({ 
-        message: "Successfully signed up for Text4Quiz! Check your phone for your first question.",
+        message: "Welcome to Text4Quiz! Check your phone for your welcome message and first trivia question.",
         user: {
           id: user.id,
           phoneNumber: user.phoneNumber,

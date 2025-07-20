@@ -155,14 +155,14 @@ Questions? Reply with your message.`;
     preferredTime: string,
   ): Promise<boolean> {
     const body = `🎉 Welcome to Text4Quiz!
-    
-You'll receive your first trivia question shortly to get started! 🧠  
-Your next question will arrive tomorrow at ${preferredTime}.
+
+Your first trivia question is being sent right now! 🧠
+Starting tomorrow, you'll receive daily questions at ${preferredTime}.
 
 Text "HELP" anytime for commands.
 Text "STOP" to unsubscribe.
 
-Get ready to learn something new every day! 🧠`;
+Let's see how much you know! 🎯`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }
