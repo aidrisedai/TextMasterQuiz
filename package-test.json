@@ -1,0 +1,8 @@
+{
+  "name": "test-runner",
+  "type": "module",
+  "scripts": {
+    "test": "tsx server/test-runner.ts",
+    "test-timezone": "tsx server/tests/timezone-scheduler-test.ts"
+  }
+}

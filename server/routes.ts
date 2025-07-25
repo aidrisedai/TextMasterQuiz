@@ -8,6 +8,9 @@ import { schedulerService } from "./services/scheduler";
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
 import simpleTestRoutes from "./routes-test-simple";
+import testRunnerRoutes from "./routes-test-runner";
+import finalTestRoutes from "./routes-test-final";
+import scoreTestRoutes from "./routes-test-score";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
@@ -461,6 +464,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Timezone testing routes
   app.use("/api/test", timezoneTestRoutes);
   app.use("/api/test", simpleTestRoutes);
+  app.use("/api/test", testRunnerRoutes);
+  app.use("/api/test", finalTestRoutes);
+  app.use("/api/test", scoreTestRoutes);
 
   // Helper function to send welcome quiz question immediately after signup
   async function sendWelcomeQuizQuestion(user: any) {
