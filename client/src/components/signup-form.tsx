@@ -55,8 +55,8 @@ const categories = [
   { value: "geography", label: "Geography" },
   { value: "literature", label: "Literature" },
   { value: "arts", label: "Arts" },
-  { value: "general", label: "General Knowledge" },
   { value: "physics", label: "Physics" },
+  { value: "general", label: "General Knowledge" },
 ];
 
 const timeOptions = [
@@ -158,7 +158,7 @@ export function SignupForm() {
     <Card className="w-full max-w-2xl mx-auto">
       <CardHeader className="text-center">
         <CardTitle className="text-3xl">Join Text4Quiz</CardTitle>
-        <CardDescription>Get started in 30 seconds</CardDescription>
+        <CardDescription>Get started in 20 seconds</CardDescription>
       </CardHeader>
       <CardContent>
         <Form {...form}>
