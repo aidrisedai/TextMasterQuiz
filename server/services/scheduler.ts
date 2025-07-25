@@ -1,4 +1,4 @@
-import cron from 'node-cron';
+import * as cron from 'node-cron';
 import { storage } from '../storage';
 import { twilioService } from './twilio';
 import { geminiService } from './gemini';
@@ -53,39 +53,20 @@ export class SchedulerService {
       
       for (const user of activeUsers) {
         try {
-          // Parse user's preferred time (format: "HH:MM" like "21:00")
-          const [hours, minutes] = user.preferredTime.split(':').map(Number);
-          
-          // Get current time in user's timezone
+          const [preferredHour, preferredMinute] = user.preferredTime.split(':').map(Number);
           const userTimezone = user.timezone || 'America/Los_Angeles';
           
-          // Create a proper Date object for user's timezone
-          const userCurrentTime = new Date(currentTime.toLocaleString("en-US", { timeZone: userTimezone }));
-          const currentHour = userCurrentTime.getHours();
+          // Get user's current hour in their timezone using proper UTC conversion
+          const userCurrentHour = this.getCurrentHourInTimezone(currentTime, userTimezone);
           
-          console.log(`🕐 User ${user.phoneNumber}: Current hour in ${userTimezone} is ${currentHour}, preferred hour is ${hours}`);
+          console.log(`🕐 User ${user.phoneNumber}: Current hour in ${userTimezone} is ${userCurrentHour}, preferred hour is ${preferredHour}`);
           
-          // Check if current time matches user's preferred time (within current hour)
-          if (currentHour === hours) {
-            // Check if user hasn't received a question today
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            const userToday = new Date(userCurrentTime);
-            userToday.setHours(0, 0, 0, 0);
-            
-            // Check if user joined today (same day) - if so, skip because they got welcome question
-            const joinDate = new Date(user.joinDate);
-            joinDate.setHours(0, 0, 0, 0);
-            const isNewUserToday = joinDate.getTime() === userToday.getTime();
-            
-            if (isNewUserToday) {
-              console.log(`🎯 User ${user.phoneNumber} joined today and already received welcome question. Next question tomorrow.`);
-            } else if (!user.lastQuizDate || new Date(user.lastQuizDate) < userToday) {
+          // Check if current time matches user's preferred time
+          if (userCurrentHour === preferredHour) {
+            const canReceive = await this.shouldUserReceiveQuestion(user, currentTime);
+            if (canReceive) {
               console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
               usersToSend.push(user);
-            } else {
-              console.log(`⏭️  User ${user.phoneNumber} already received today's question`);
             }
           }
         } catch (error) {
@@ -100,18 +81,64 @@ export class SchedulerService {
     }
   }
 
+  private getCurrentHourInTimezone(date: Date, timezone: string): number {
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      hour: '2-digit',
+      hour12: false
+    });
+    
+    const hour = formatter.format(date);
+    return parseInt(hour, 10);
+  }
+
+  private async shouldUserReceiveQuestion(user: any, currentTime: Date): Promise<boolean> {
+    const userTimezone = user.timezone || 'America/Los_Angeles';
+    
+    // Check if user joined today - skip if they got welcome question
+    const todayInUserTZ = currentTime;
+    const joinDateInUserTZ = new Date(user.joinDate);
+    
+    if (this.isSameDayInTimezone(todayInUserTZ, joinDateInUserTZ, userTimezone)) {
+      console.log(`🎯 User ${user.phoneNumber} joined today and already received welcome question. Next question tomorrow.`);
+      return false;
+    }
+    
+    // Check if already received today's question
+    if (user.lastQuizDate) {
+      const lastQuizInUserTZ = new Date(user.lastQuizDate);
+      if (this.isSameDayInTimezone(todayInUserTZ, lastQuizInUserTZ, userTimezone)) {
+        console.log(`⏭️  User ${user.phoneNumber} already received today's question`);
+        return false;
+      }
+    }
+    
+    // Check for pending answers
+    const pendingCount = await storage.getPendingAnswersCount(user.id);
+    if (pendingCount > 0) {
+      console.log(`⚠️  User ${user.phoneNumber} already has ${pendingCount} pending answer(s). Skipping question send.`);
+      return false;
+    }
+    
+    return true;
+  }
+
+  private isSameDayInTimezone(date1: Date, date2: Date, timezone: string): boolean {
+    const format: Intl.DateTimeFormatOptions = { 
+      timeZone: timezone, 
+      year: 'numeric', 
+      month: '2-digit', 
+      day: '2-digit' 
+    };
+    return new Intl.DateTimeFormat('en-US', format).format(date1) === 
+           new Intl.DateTimeFormat('en-US', format).format(date2);
+  }
+
   private async sendQuestionToUser(user: any) {
     try {
       console.log(`📤 Sending daily question to user ${user.id} (${user.phoneNumber})`);
       
-      // CRITICAL: Check for pending answers first to prevent duplicate questions
-      // Use a more robust check by directly querying the database
-      const pendingAnswersCount = await storage.getPendingAnswersCount(user.id);
-      
-      if (pendingAnswersCount > 0) {
-        console.log(`⚠️  User ${user.phoneNumber} already has ${pendingAnswersCount} pending answer(s). Skipping question send.`);
-        return;
-      }
+      // Pending answer check is now handled in shouldUserReceiveQuestion method
       
       const userAnswers = await storage.getUserAnswers(user.id, 1000);
       
