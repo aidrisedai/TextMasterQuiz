@@ -105,8 +105,13 @@ export default function Home() {
               <span className="text-primary">Via SMS</span>
             </h1>
             <p className="text-xl text-muted-foreground mb-8 max-w-2xl mx-auto">
-              One engaging trivia question delivered to your phone every day.
-              Just reply A, B, C, or D! No App required.
+              One engaging trivia question,
+              <br />
+              delivered to your phone daily.
+              <br />
+              Just reply A, B, C, or D!
+              <br />
+              No App required.
             </p>
           </div>
 
