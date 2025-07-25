@@ -55,8 +55,8 @@ const categories = [
   { value: "geography", label: "Geography" },
   { value: "literature", label: "Literature" },
   { value: "arts", label: "Arts" },
-  { value: "general", label: "General Knowledge" },
   { value: "physics", label: "Physics" },
+  { value: "general", label: "General Knowledge" },
 ];
 
 const timeOptions = [
