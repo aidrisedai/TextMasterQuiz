@@ -6,6 +6,8 @@ import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
 import { schedulerService } from "./services/scheduler";
 import { adminRoutes } from "./routes-admin.js";
+import timezoneTestRoutes from "./routes-test-timezone";
+import simpleTestRoutes from "./routes-test-simple";
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
@@ -455,6 +457,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Test routes for SMS commands
   const testRoutes = await import('./routes-test.js');
   app.use("/api/test", testRoutes.default);
+  
+  // Timezone testing routes
+  app.use("/api/test", timezoneTestRoutes);
+  app.use("/api/test", simpleTestRoutes);
 
   // Helper function to send welcome quiz question immediately after signup
   async function sendWelcomeQuizQuestion(user: any) {
