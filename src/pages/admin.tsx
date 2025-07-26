@@ -543,42 +543,46 @@ export default function AdminPage() {
                 <ScrollArea className="h-[600px]">
                   <div className="space-y-4">
                     {questions.map((question, index) => (
-                      <div key={question.id} className="p-4 border rounded-lg space-y-2">
-                        <div className="flex justify-between items-start">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-sm">
-                              Question #{index + 1}
-                            </h3>
-                            <p className="text-sm mt-1">{question.questionText}</p>
-                          </div>
-                          <div className="flex gap-2">
+                      <div key={question.id} className="border rounded-lg space-y-3">
+                        {/* Header section with metadata */}
+                        <div className="flex justify-between items-center p-3 bg-gray-50 border-b">
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold text-sm">Question #{index + 1}</span>
                             <Badge variant="outline">{question.category}</Badge>
                             <Badge variant="secondary">{question.difficultyLevel}</Badge>
                             <Badge variant="outline">Used {question.usageCount}x</Badge>
                           </div>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <div className={`p-2 rounded ${question.correctAnswer === 'A' ? 'bg-green-100' : 'bg-gray-50'}`}>
+                        {/* Question text with full width */}
+                        <div className="px-4">
+                          <p className="text-sm font-medium leading-relaxed">{question.questionText}</p>
+                        </div>
+                        
+                        {/* Answer options with same width as question */}
+                        <div className="px-4 space-y-2 text-sm">
+                          <div className={`p-2 rounded ${question.correctAnswer === 'A' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
                             A) {question.optionA}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'B' ? 'bg-green-100' : 'bg-gray-50'}`}>
+                          <div className={`p-2 rounded ${question.correctAnswer === 'B' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
                             B) {question.optionB}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'C' ? 'bg-green-100' : 'bg-gray-50'}`}>
+                          <div className={`p-2 rounded ${question.correctAnswer === 'C' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
                             C) {question.optionC}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'D' ? 'bg-green-100' : 'bg-gray-50'}`}>
+                          <div className={`p-2 rounded ${question.correctAnswer === 'D' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
                             D) {question.optionD}
                           </div>
                         </div>
                         
-                        <div className="text-xs text-gray-600">
-                          <strong>Explanation:</strong> {question.explanation}
-                        </div>
-                        
-                        <div className="text-xs text-gray-400">
-                          Created: {new Date(question.createdDate).toLocaleString()}
+                        {/* Explanation and metadata */}
+                        <div className="px-4 pb-4 space-y-2">
+                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                            <strong>Explanation:</strong> {question.explanation}
+                          </div>
+                          <div className="text-xs text-gray-400 dark:text-gray-500">
+                            Created: {new Date(question.createdDate).toLocaleString()}
+                          </div>
                         </div>
                       </div>
                     ))}
