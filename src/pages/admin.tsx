@@ -681,65 +681,85 @@ export default function AdminPage() {
                         const comparison = aVal.localeCompare(bVal);
                         return sortOrder === 'asc' ? comparison : -comparison;
                       })
-                      .map((user) => (
-                        <div key={user.id} className="p-4 border rounded-lg space-y-3">
-                          <div className="flex justify-between items-start">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2">
-                                <h3 className="font-semibold">{user.phoneNumber}</h3>
-                                <Badge variant={user.isActive ? "default" : "secondary"}>
-                                  {user.isActive ? 'Active' : 'Inactive'}
-                                </Badge>
-                                <Badge variant={user.subscriptionStatus === 'active' ? "default" : "outline"}>
-                                  {user.subscriptionStatus}
-                                </Badge>
-                              </div>
-                              
-                              <div className="text-sm text-gray-600 mt-1">
-                                <div>Categories: {user.categories.length > 0 ? user.categories.join(', ') : 'None'}</div>
-                                <div>Preferred Time: {user.preferredTime} ({user.timezone})</div>
-                                <div>Stats: {user.questionsAnswered} answered, {user.currentStreak} streak, {user.totalScore} points</div>
-                                <div>Accuracy: {user.questionsAnswered > 0 ? Math.round((user.correctAnswers / user.questionsAnswered) * 100) : 0}%</div>
-                              </div>
+                      .map((user, index) => (
+                        <div key={user.id} className="border rounded-lg space-y-3">
+                          {/* Header section with metadata */}
+                          <div className="flex justify-between items-center p-3 bg-gray-50 dark:bg-gray-800 border-b">
+                            <div className="flex items-center gap-3">
+                              <span className="font-semibold text-sm">User #{index + 1}</span>
+                              <Badge variant={user.isActive ? "default" : "secondary"}>
+                                {user.isActive ? 'Active' : 'Inactive'}
+                              </Badge>
+                              <Badge variant={user.subscriptionStatus === 'active' ? "default" : "outline"}>
+                                {user.subscriptionStatus}
+                              </Badge>
+                              <Badge variant="outline">{user.questionsAnswered} answered</Badge>
+                            </div>
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              Joined: {new Date(user.joinDate).toLocaleDateString()}
+                            </div>
+                          </div>
+                          
+                          {/* User details with full width */}
+                          <div className="px-4">
+                            <div className="mb-2">
+                              <h3 className="font-semibold text-base">{user.phoneNumber}</h3>
                             </div>
                             
-                            <div className="text-right text-sm">
-                              <div className="font-medium">
-                                Last Message: {user.lastMessageDate 
-                                  ? new Date(user.lastMessageDate).toLocaleDateString() 
-                                  : 'Never'}
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+                              <div>
+                                <div><strong>Categories:</strong> {user.categories.length > 0 ? user.categories.join(', ') : 'None'}</div>
+                                <div><strong>Preferred Time:</strong> {user.preferredTime} ({user.timezone})</div>
                               </div>
-                              <div className="text-xs text-gray-500">
-                                Joined: {new Date(user.joinDate).toLocaleDateString()}
+                              <div>
+                                <div><strong>Streak:</strong> {user.currentStreak} days</div>
+                                <div><strong>Total Score:</strong> {user.totalScore} points</div>
+                                <div><strong>Accuracy:</strong> {user.questionsAnswered > 0 ? Math.round((user.correctAnswers / user.questionsAnswered) * 100) : 0}%</div>
                               </div>
                             </div>
                           </div>
                           
+                          {/* Last message activity */}
+                          <div className="px-4">
+                            <div className="text-sm">
+                              <strong>Last Message:</strong> {user.lastMessageDate 
+                                ? new Date(user.lastMessageDate).toLocaleDateString() 
+                                : 'Never'}
+                            </div>
+                          </div>
+                          
+                          {/* Last message content */}
                           {user.lastMessageContent && (
-                            <div className="bg-gray-50 p-3 rounded text-sm">
-                              <div className="font-medium mb-1">Last Message Content:</div>
-                              <div className="text-gray-700 line-clamp-2">
-                                {user.lastMessageContent}
+                            <div className="px-4">
+                              <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded text-sm">
+                                <div className="font-medium mb-1">Last Message Content:</div>
+                                <div className="text-gray-700 dark:text-gray-300 line-clamp-2">
+                                  {user.lastMessageContent}
+                                </div>
                               </div>
                             </div>
                           )}
                           
-                          <div className="flex gap-2 pt-2">
-                            <Button
-                              onClick={() => handleResendMessage(user.phoneNumber)}
-                              disabled={!user.lastMessageContent}
-                              size="sm"
-                              variant="outline"
-                            >
-                              <MessageSquare className="h-4 w-4 mr-2" />
-                              Resend Previous Message
-                            </Button>
-                            
-                            {!user.isActive && (
-                              <Badge variant="destructive" className="text-xs">
-                                User Stopped Messages
-                              </Badge>
-                            )}
+                          {/* Actions and status */}
+                          <div className="px-4 pb-4">
+                            <div className="flex gap-2 items-center">
+                              <Button
+                                onClick={() => handleResendMessage(user.phoneNumber)}
+                                disabled={!user.lastMessageContent}
+                                size="sm"
+                                variant="outline"
+                                className="min-h-[44px]"
+                              >
+                                <MessageSquare className="h-4 w-4 mr-2" />
+                                Resend Message
+                              </Button>
+                              
+                              {!user.isActive && (
+                                <Badge variant="destructive" className="text-xs">
+                                  User Stopped Messages
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       ))}
