@@ -345,10 +345,15 @@ export function SignupForm() {
           </form>
         </Form>
 
-        <div className="text-center mt-6">
+        <div className="text-center mt-6 space-y-2">
           <p className="text-sm text-muted-foreground">
-            Always free. US-based phone numbers only. Premium plan coming soon.
-            Cancel anytime by texting "STOP"
+            Text STOP to cancel
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Free for US-based phones
+          </p>
+          <p className="text-sm text-muted-foreground">
+            Premium plan coming soon
           </p>
         </div>
       </CardContent>
