@@ -36,9 +36,11 @@ export const PhoneInput = forwardRef<HTMLInputElement, PhoneInputProps>(
           {...props}
           ref={ref}
           type="tel"
+          inputMode="tel"
+          autoComplete="tel"
           placeholder="+1 (555) 123-4567"
           onChange={handleChange}
-          className={`pl-12 ${error ? 'border-destructive' : ''}`}
+          className={`pl-12 text-base min-h-[44px] ${error ? 'border-destructive' : ''}`}
         />
         <Phone className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
         {error && (

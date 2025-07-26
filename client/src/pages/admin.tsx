@@ -421,40 +421,40 @@ export default function AdminPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-bold">Text4Quiz Admin</h1>
-        <div className="flex items-center gap-2">
+    <div className="container mx-auto p-4 sm:p-6 space-y-6 overflow-x-hidden">
+      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold">Text4Quiz Admin</h1>
+        <div className="flex flex-wrap items-center gap-2">
           {authStatus.user && (
-            <div className="flex items-center gap-2 mr-4">
+            <div className="flex items-center gap-2 mr-2 sm:mr-4">
               <User className="h-4 w-4" />
-              <span className="text-sm">{authStatus.user.name}</span>
-              <Button onClick={handleLogout} variant="outline" size="sm">
-                <LogOut className="h-4 w-4 mr-2" />
-                Logout
+              <span className="text-sm hidden sm:inline">{authStatus.user.name}</span>
+              <Button onClick={handleLogout} variant="outline" size="sm" className="min-h-[44px]">
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
             </div>
           )}
-          <Button onClick={() => fetchQuestions(selectedCategory)} variant="outline">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button onClick={() => fetchQuestions(selectedCategory)} variant="outline" className="min-h-[44px]">
+            <RefreshCw className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button onClick={generateQuestions}>
-            <Plus className="h-4 w-4 mr-2" />
-            Generate Questions
+          <Button onClick={generateQuestions} className="min-h-[44px]">
+            <Plus className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Generate</span>
           </Button>
-          <Button onClick={testSMS} variant="outline">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Test SMS
+          <Button onClick={testSMS} variant="outline" className="min-h-[44px]">
+            <MessageSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Test SMS</span>
           </Button>
-          <Button onClick={testAllCommands} variant="outline">
-            <MessageSquare className="h-4 w-4 mr-2" />
-            Test All Commands
+          <Button onClick={testAllCommands} variant="outline" className="min-h-[44px]">
+            <MessageSquare className="h-4 w-4 sm:mr-2" />
+            <span className="hidden sm:inline">Test All</span>
           </Button>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Questions</CardTitle>

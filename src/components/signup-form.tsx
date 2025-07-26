@@ -254,7 +254,7 @@ export function SignupForm() {
               render={() => (
                 <FormItem>
                   <FormLabel>Choose Your Categories</FormLabel>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {categories.map((category) => (
                       <FormField
                         key={category.value}
@@ -326,7 +326,7 @@ export function SignupForm() {
 
             <Button
               type="submit"
-              className="w-full btn-primary"
+              className="w-full btn-primary min-h-[44px]"
               size="lg"
               disabled={signupMutation.isPending}
             >

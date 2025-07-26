@@ -69,13 +69,16 @@ export default function Dashboard() {
                   <Input
                     id="phone"
                     type="tel"
+                    inputMode="tel"
+                    autoComplete="tel"
                     placeholder="+1 (555) 123-4567"
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value)}
+                    className="text-base min-h-[44px]" // Prevents zoom on iOS, proper touch target
                     required
                   />
                 </div>
-                <Button type="submit" className="w-full">
+                <Button type="submit" className="w-full min-h-[44px]">
                   View Dashboard
                 </Button>
               </form>
@@ -166,7 +169,7 @@ export default function Dashboard() {
   const { user, stats, recentAnswers } = userData;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="bg-background shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -180,7 +183,7 @@ export default function Dashboard() {
               </div>
             </Link>
             <div className="flex items-center space-x-4">
-              <span className="text-sm text-muted-foreground">
+              <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.phoneNumber}
               </span>
               <Link href="/">

@@ -27,7 +27,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background overflow-x-hidden">
       {/* Header */}
       <header className="fixed top-0 left-0 right-0 z-50 bg-background shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -57,21 +57,6 @@ export default function Home() {
               >
                 Features
               </a>
-              {/*<a
-                href="#pricing"
-                className="text-muted-foreground hover:text-primary transition-colors"
-                onClick={(e) => {
-                  e.preventDefault();
-                  const element = document.getElementById('pricing');
-                  if (element) {
-                    const offset = 80;
-                    const elementPosition = element.offsetTop - offset;
-                    window.scrollTo({ top: elementPosition, behavior: 'smooth' });
-                  }
-                }}
-              >
-                Pricing
-              </a>*/}
               <a
                 href="#demo"
                 className="text-muted-foreground hover:text-primary transition-colors"
@@ -91,6 +76,18 @@ export default function Home() {
                 Demo
               </a>
             </nav>
+            
+            {/* Mobile Navigation */}
+            <div className="md:hidden">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={scrollToSignup}
+                className="min-h-[44px]"
+              >
+                Get Started
+              </Button>
+            </div>
           </div>
         </div>
       </header>
