@@ -509,17 +509,20 @@ export default function AdminPage() {
         </TabsList>
         
         <TabsContent value="questions" className="space-y-4">
-          <div className="flex gap-2 flex-wrap">
+          <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 max-w-full">
             {categories.map(category => (
               <Button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
                 variant={selectedCategory === category ? "default" : "outline"}
                 size="sm"
+                className="flex-shrink-0 min-h-[44px]"
               >
-                {category === 'all' ? 'All Categories' : category}
+                <span className="truncate max-w-[100px] sm:max-w-none">
+                  {category === 'all' ? 'All Categories' : category}
+                </span>
                 {category !== 'all' && stats.categories[category] && (
-                  <Badge variant="secondary" className="ml-2">
+                  <Badge variant="secondary" className="ml-2 text-xs hidden sm:inline">
                     {stats.categories[category]}
                   </Badge>
                 )}
@@ -540,44 +543,44 @@ export default function AdminPage() {
                   <span className="ml-2">Loading questions...</span>
                 </div>
               ) : (
-                <ScrollArea className="h-[600px]">
-                  <div className="space-y-4">
+                <ScrollArea className="h-[400px] sm:h-[500px] lg:h-[600px] w-full">
+                  <div className="space-y-4 max-w-full">
                     {questions.map((question, index) => (
                       <div key={question.id} className="border rounded-lg space-y-3">
                         {/* Header section with metadata */}
-                        <div className="flex justify-between items-center p-3 bg-gray-50 border-b">
-                          <div className="flex items-center gap-3">
+                        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-2 sm:p-3 bg-gray-50 dark:bg-gray-800 border-b">
+                          <div className="flex flex-wrap items-center gap-2">
                             <span className="font-semibold text-sm">Question #{index + 1}</span>
-                            <Badge variant="outline">{question.category}</Badge>
-                            <Badge variant="secondary">{question.difficultyLevel}</Badge>
-                            <Badge variant="outline">Used {question.usageCount}x</Badge>
+                            <Badge variant="outline" className="text-xs">{question.category}</Badge>
+                            <Badge variant="secondary" className="text-xs hidden sm:inline">{question.difficultyLevel}</Badge>
+                            <Badge variant="outline" className="text-xs">Used {question.usageCount}x</Badge>
                           </div>
                         </div>
                         
                         {/* Question text with full width */}
-                        <div className="px-4">
-                          <p className="text-sm font-medium leading-relaxed">{question.questionText}</p>
+                        <div className="px-2 sm:px-4">
+                          <p className="text-sm font-medium leading-relaxed break-words overflow-wrap-anywhere max-w-full">{question.questionText}</p>
                         </div>
                         
                         {/* Answer options with same width as question */}
-                        <div className="px-4 space-y-2 text-sm">
-                          <div className={`p-2 rounded ${question.correctAnswer === 'A' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                            A) {question.optionA}
+                        <div className="px-2 sm:px-4 space-y-2 text-sm max-w-full">
+                          <div className={`p-2 rounded break-words overflow-wrap-anywhere ${question.correctAnswer === 'A' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                            <span className="font-medium">A)</span> {question.optionA}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'B' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                            B) {question.optionB}
+                          <div className={`p-2 rounded break-words overflow-wrap-anywhere ${question.correctAnswer === 'B' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                            <span className="font-medium">B)</span> {question.optionB}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'C' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                            C) {question.optionC}
+                          <div className={`p-2 rounded break-words overflow-wrap-anywhere ${question.correctAnswer === 'C' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                            <span className="font-medium">C)</span> {question.optionC}
                           </div>
-                          <div className={`p-2 rounded ${question.correctAnswer === 'D' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
-                            D) {question.optionD}
+                          <div className={`p-2 rounded break-words overflow-wrap-anywhere ${question.correctAnswer === 'D' ? 'bg-green-100 dark:bg-green-900' : 'bg-gray-50 dark:bg-gray-800'}`}>
+                            <span className="font-medium">D)</span> {question.optionD}
                           </div>
                         </div>
                         
                         {/* Explanation and metadata */}
-                        <div className="px-4 pb-4 space-y-2">
-                          <div className="text-xs text-gray-600 dark:text-gray-400">
+                        <div className="px-2 sm:px-4 pb-4 space-y-2">
+                          <div className="text-xs text-gray-600 dark:text-gray-400 break-words overflow-wrap-anywhere">
                             <strong>Explanation:</strong> {question.explanation}
                           </div>
                           <div className="text-xs text-gray-400 dark:text-gray-500">
@@ -594,46 +597,54 @@ export default function AdminPage() {
         </TabsContent>
         
         <TabsContent value="users" className="space-y-4">
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-col sm:flex-row gap-4 items-stretch sm:items-center">
             <Input
               placeholder="Filter by phone number..."
               value={userFilter}
               onChange={(e) => setUserFilter(e.target.value)}
-              className="max-w-sm"
+              className="w-full sm:max-w-sm"
             />
-            <div className="flex gap-2">
+            <div className="flex gap-2 flex-wrap overflow-x-auto pb-2 sm:pb-0">
               <Button
                 onClick={() => setSortBy('name')}
                 variant={sortBy === 'name' ? "default" : "outline"}
                 size="sm"
+                className="flex-shrink-0 min-h-[44px]"
               >
-                Sort by Phone
+                <span className="hidden sm:inline">Sort by Phone</span>
+                <span className="sm:hidden">Phone</span>
               </Button>
               <Button
                 onClick={() => setSortBy('date')}
                 variant={sortBy === 'date' ? "default" : "outline"}
                 size="sm"
+                className="flex-shrink-0 min-h-[44px]"
               >
-                Sort by Date
+                <span className="hidden sm:inline">Sort by Date</span>
+                <span className="sm:hidden">Date</span>
               </Button>
               <Button
                 onClick={() => setSortBy('categories')}
                 variant={sortBy === 'categories' ? "default" : "outline"}
                 size="sm"
+                className="flex-shrink-0 min-h-[44px]"
               >
-                Sort by Categories
+                <span className="hidden sm:inline">Sort by Categories</span>
+                <span className="sm:hidden">Categories</span>
               </Button>
               <Button
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 variant="outline"
                 size="sm"
+                className="flex-shrink-0 min-h-[44px]"
               >
                 {sortOrder === 'asc' ? '↑' : '↓'}
               </Button>
             </div>
-            <Button onClick={fetchUsers} variant="outline" size="sm">
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh Users
+            <Button onClick={fetchUsers} variant="outline" size="sm" className="flex-shrink-0 min-h-[44px]">
+              <RefreshCw className="h-4 w-4 sm:mr-2" />
+              <span className="hidden sm:inline">Refresh Users</span>
+              <span className="sm:hidden">Refresh</span>
             </Button>
           </div>
 
