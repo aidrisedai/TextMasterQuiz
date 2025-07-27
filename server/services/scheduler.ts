@@ -12,6 +12,16 @@ export class SchedulerService {
       await this.sendDailyQuestions();
     });
     
+    // Daily cleanup of orphaned pending answers (2 AM UTC)
+    cron.schedule('0 2 * * *', async () => {
+      try {
+        const cleaned = await storage.cleanupOrphanedPendingAnswers();
+        console.log(`🧹 Cleaned up ${cleaned} orphaned pending answers`);
+      } catch (error) {
+        console.error('Error in cleanup job:', error);
+      }
+    });
+    
     // For testing: run every 5 minutes to test the system (disabled in production)
     // cron.schedule('*/5 * * * *', async () => {
     //   console.log('🧪 Testing scheduler - checking for users needing questions...');
@@ -113,12 +123,9 @@ export class SchedulerService {
       }
     }
     
-    // Check for pending answers
-    const pendingCount = await storage.getPendingAnswersCount(user.id);
-    if (pendingCount > 0) {
-      console.log(`⚠️  User ${user.phoneNumber} already has ${pendingCount} pending answer(s). Skipping question send.`);
-      return false;
-    }
+    // NOTE: Removed pending answer check - now handled atomically in sendQuestionToUser
+    // This prevents race conditions where multiple processes could pass the check
+    // but the atomic createPendingAnswerIfNone() ensures only one succeeds
     
     return true;
   }
@@ -138,10 +145,8 @@ export class SchedulerService {
     try {
       console.log(`📤 Sending daily question to user ${user.id} (${user.phoneNumber})`);
       
-      // Pending answer check is now handled in shouldUserReceiveQuestion method
-      
+      // Get question selection data
       const userAnswers = await storage.getUserAnswers(user.id, 1000);
-      
       const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
       
       // Select ONE category for today's question (rotate through user preferences)
@@ -180,6 +185,14 @@ export class SchedulerService {
       }
 
       if (question) {
+        // ATOMIC RACE CONDITION FIX: Check and create pending answer atomically
+        const canSend = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!canSend) {
+          console.log(`⚠️  User ${user.phoneNumber} already has pending question - race condition prevented duplicate`);
+          return;
+        }
+        
+        // Now safe to send SMS - pending answer already created atomically
         await storage.incrementQuestionUsage(question.id);
         
         const questionNumber = user.questionsAnswered + 1;
@@ -189,29 +202,17 @@ export class SchedulerService {
           questionNumber
         );
         
-        // Create a pending answer record so we can track which question was sent
-        await storage.recordAnswer({
-          userId: user.id,
-          questionId: question.id,
-          userAnswer: null, // Will be filled when user responds
-          isCorrect: false, // Will be updated when user responds
-          pointsEarned: 0, // Will be updated when user responds
-        });
-        
         // Update user's lastQuizDate to prevent duplicate questions in same day
         await storage.updateUser(user.id, {
           lastQuizDate: new Date()
         });
         
-        console.log(`✅ Sent daily question #${questionNumber} to user ${user.id} and created pending answer record`);
+        console.log(`✅ Sent daily question #${questionNumber} to user ${user.id} (race condition protected)`);
       } else {
         console.log('❌ No question available to send');
       }
     } catch (error) {
       console.error('Error in sendQuestionToUser:', error);
-      
-      // REMOVED: Fallback mechanism to prevent duplicate questions
-      // Instead, log the error and skip sending to avoid duplicates
       console.log(`❌ Skipping question send to user ${user.id} due to error to prevent duplicates`);
     }
   }

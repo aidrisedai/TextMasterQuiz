@@ -36,6 +36,8 @@ export interface IStorage {
   
   // Duplicate prevention methods
   getPendingAnswersCount(userId: number): Promise<number>;
+  createPendingAnswerIfNone(userId: number, questionId: number): Promise<boolean>;
+  cleanupOrphanedPendingAnswers(): Promise<number>;
   
   // Generation queue methods
   createGenerationJob(job: InsertGenerationJob): Promise<GenerationJob>;
@@ -263,6 +265,54 @@ export class DatabaseStorage implements IStorage {
       );
     
     return result[0]?.count || 0;
+  }
+
+  // Atomic method to check and create pending answer - prevents race conditions
+  async createPendingAnswerIfNone(userId: number, questionId: number): Promise<boolean> {
+    try {
+      return await db.transaction(async (tx) => {
+        // Check for existing pending answers within transaction
+        const existing = await tx.select({ count: sql<number>`count(*)` })
+          .from(userAnswers)
+          .where(and(
+            eq(userAnswers.userId, userId),
+            isNull(userAnswers.userAnswer)
+          ));
+        
+        if (existing[0].count > 0) {
+          return false; // Already has pending answer
+        }
+        
+        // Atomically create pending answer
+        await tx.insert(userAnswers).values({
+          userId,
+          questionId,
+          userAnswer: null,
+          isCorrect: false,
+          pointsEarned: 0,
+        });
+        
+        return true; // Successfully created
+      });
+    } catch (error) {
+      console.error('Error creating pending answer:', error);
+      return false;
+    }
+  }
+
+  // Cleanup orphaned pending answers (for SMS failures)
+  async cleanupOrphanedPendingAnswers(): Promise<number> {
+    try {
+      const result = await db.delete(userAnswers)
+        .where(and(
+          isNull(userAnswers.userAnswer),
+          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '24 hours'`
+        ));
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error('Error cleaning up orphaned pending answers:', error);
+      return 0;
+    }
   }
 
   async getAdminByUsername(username: string): Promise<AdminUser | undefined> {
