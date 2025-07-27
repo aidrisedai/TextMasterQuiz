@@ -68,8 +68,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize scheduler
+  // Initialize scheduler and queue processor
   schedulerService.init();
+  
+  // Start queue processor for generation jobs
+  const { queueProcessor } = await import("./services/queue-processor.js");
+  queueProcessor.start();
+  console.log('Queue processor initialized');
   
   // Ensure default admin user exists
   await ensureDefaultAdmin();

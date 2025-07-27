@@ -64,6 +64,24 @@ interface AuthStatus {
   };
 }
 
+interface GenerationJob {
+  id: number;
+  category: string;
+  questionCount: number;
+  status: 'pending' | 'active' | 'completed' | 'failed';
+  progress: number;
+  total: number | null;
+  errorMessage: string | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+const queueGenerationSchema = z.object({
+  category: z.string().min(1, 'Category is required'),
+  questionCount: z.number().min(1).max(100, 'Maximum 100 questions per job'),
+});
+
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
@@ -83,6 +101,8 @@ export default function AdminPage() {
   const [userFilter, setUserFilter] = useState('');
   const [sortBy, setSortBy] = useState<'name' | 'date' | 'categories'>('date');
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [generationJobs, setGenerationJobs] = useState<GenerationJob[]>([]);
+  const [isGenerationLoading, setIsGenerationLoading] = useState(false);
   const { toast } = useToast();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -90,6 +110,14 @@ export default function AdminPage() {
     defaultValues: {
       username: "",
       password: "",
+    },
+  });
+
+  const queueForm = useForm<z.infer<typeof queueGenerationSchema>>({
+    resolver: zodResolver(queueGenerationSchema),
+    defaultValues: {
+      category: "",
+      questionCount: 20,
     },
   });
 
@@ -189,28 +217,82 @@ export default function AdminPage() {
     }
   };
 
-  const generateQuestions = async () => {
+  const fetchGenerationQueue = async () => {
     try {
-      const response = await fetch('/api/admin/generate-questions', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      });
-      
+      setIsGenerationLoading(true);
+      const response = await fetch('/api/admin/generation-queue');
       const data = await response.json();
-      
-      toast({
-        title: "Question Generation Started",
-        description: data.note || "This will take several minutes. Check server logs for progress.",
-      });
-      
-      // Refresh questions after a delay
-      setTimeout(() => fetchQuestions(selectedCategory), 2000);
+      setGenerationJobs(data.jobs || []);
     } catch (error) {
-      console.error('Error generating questions:', error);
+      console.error('Error fetching generation queue:', error);
       toast({
         title: "Error",
-        description: "Failed to start question generation",
+        description: "Failed to load generation queue",
+        variant: "destructive"
+      });
+    } finally {
+      setIsGenerationLoading(false);
+    }
+  };
+
+  const addToQueue = async (data: z.infer<typeof queueGenerationSchema>) => {
+    try {
+      const response = await fetch('/api/admin/queue-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data)
+      });
+      
+      const result = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Added to Queue",
+          description: result.message,
+        });
+        queueForm.reset();
+        fetchGenerationQueue();
+      } else {
+        toast({
+          title: "Error",
+          description: result.error || "Failed to add to queue",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error adding to queue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add to queue",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const removeFromQueue = async (jobId: number) => {
+    try {
+      const response = await fetch(`/api/admin/generation-queue/${jobId}`, {
+        method: 'DELETE'
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Removed from Queue",
+          description: "Job has been cancelled",
+        });
+        fetchGenerationQueue();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to remove from queue",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error removing from queue:', error);
+      toast({
+        title: "Error",
+        description: "Failed to remove from queue",
         variant: "destructive"
       });
     }
@@ -338,11 +420,23 @@ export default function AdminPage() {
   useEffect(() => {
     if (authStatus.authenticated) {
       fetchQuestions(selectedCategory);
+      fetchGenerationQueue();
       if (activeTab === 'users') {
         fetchUsers();
       }
     }
   }, [selectedCategory, authStatus.authenticated, activeTab]);
+
+  // Poll for queue updates every 3 seconds
+  useEffect(() => {
+    if (!authStatus.authenticated) return;
+    
+    const interval = setInterval(() => {
+      fetchGenerationQueue();
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [authStatus.authenticated]);
 
   const categories = ['all', ...Object.keys(stats.categories)];
 
@@ -439,9 +533,9 @@ export default function AdminPage() {
             <RefreshCw className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">Refresh</span>
           </Button>
-          <Button onClick={generateQuestions} className="min-h-[44px]">
+          <Button onClick={() => setActiveTab('generation')} className="min-h-[44px]">
             <Plus className="h-4 w-4 sm:mr-2" />
-            <span className="hidden sm:inline">Generate</span>
+            <span className="hidden sm:inline">Queue</span>
           </Button>
           <Button onClick={testSMS} variant="outline" className="min-h-[44px]">
             <MessageSquare className="h-4 w-4 sm:mr-2" />
@@ -505,6 +599,7 @@ export default function AdminPage() {
         <TabsList className="flex w-full h-10">
           <TabsTrigger value="questions" className="flex-1">Questions</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
+          <TabsTrigger value="generation" className="flex-1">Generation</TabsTrigger>
           <TabsTrigger value="categories" className="flex-1">Categories</TabsTrigger>
         </TabsList>
         
@@ -787,6 +882,160 @@ export default function AdminPage() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+        
+        <TabsContent value="generation" className="space-y-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Add to Queue Form */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Generation Job</CardTitle>
+                <p className="text-sm text-gray-600">Select a category and specify how many questions to generate</p>
+              </CardHeader>
+              <CardContent>
+                <Form {...queueForm}>
+                  <form onSubmit={queueForm.handleSubmit(addToQueue)} className="space-y-4">
+                    <FormField
+                      control={queueForm.control}
+                      name="category"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Category</FormLabel>
+                          <FormControl>
+                            <select 
+                              {...field} 
+                              className="w-full p-2 border rounded-md bg-background"
+                            >
+                              <option value="">Select category...</option>
+                              {Object.keys(stats.categories).map(category => (
+                                <option key={category} value={category}>
+                                  {category} ({stats.categories[category]} existing)
+                                </option>
+                              ))}
+                            </select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={queueForm.control}
+                      name="questionCount"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Number of Questions (1-100)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              type="number" 
+                              min={1} 
+                              max={100} 
+                              {...field}
+                              onChange={e => field.onChange(Number(e.target.value))}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <Button type="submit" className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add to Queue
+                    </Button>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            {/* Queue Status */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Generation Queue</CardTitle>
+                <p className="text-sm text-gray-600">Real-time status of generation jobs</p>
+              </CardHeader>
+              <CardContent>
+                {isGenerationLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+                    <span>Loading queue...</span>
+                  </div>
+                ) : generationJobs.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No generation jobs in queue
+                  </div>
+                ) : (
+                  <ScrollArea className="h-96">
+                    <div className="space-y-3">
+                      {generationJobs.map(job => (
+                        <div key={job.id} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <h3 className="font-semibold">{job.category}</h3>
+                              <p className="text-sm text-gray-600">
+                                {job.questionCount} questions
+                              </p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <Badge 
+                                variant={
+                                  job.status === 'completed' ? 'default' :
+                                  job.status === 'active' ? 'secondary' :
+                                  job.status === 'failed' ? 'destructive' : 'outline'
+                                }
+                              >
+                                {job.status}
+                              </Badge>
+                              {job.status === 'pending' && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => removeFromQueue(job.id)}
+                                >
+                                  Cancel
+                                </Button>
+                              )}
+                            </div>
+                          </div>
+                          
+                          {job.status === 'active' && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress</span>
+                                <span>{job.progress}/{job.total || job.questionCount}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all"
+                                  style={{ 
+                                    width: `${((job.progress / (job.total || job.questionCount)) * 100)}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          
+                          {job.status === 'failed' && job.errorMessage && (
+                            <div className="text-sm text-red-600 bg-red-50 p-2 rounded">
+                              Error: {job.errorMessage}
+                            </div>
+                          )}
+                          
+                          <div className="text-xs text-gray-500">
+                            Created: {new Date(job.createdAt).toLocaleString()}
+                            {job.completedAt && (
+                              <>
+                                <br />
+                                Completed: {new Date(job.completedAt).toLocaleString()}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
         
         <TabsContent value="categories" className="space-y-4">

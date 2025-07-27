@@ -1,4 +1,4 @@
-import { users, questions, userAnswers, adminUsers, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser } from "@shared/schema";
+import { users, questions, userAnswers, adminUsers, generationJobs, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
 
@@ -36,6 +36,14 @@ export interface IStorage {
   
   // Duplicate prevention methods
   getPendingAnswersCount(userId: number): Promise<number>;
+  
+  // Generation queue methods
+  createGenerationJob(job: InsertGenerationJob): Promise<GenerationJob>;
+  getGenerationJobs(): Promise<GenerationJob[]>;
+  getNextPendingJob(): Promise<GenerationJob | undefined>;
+  updateGenerationJob(id: number, updates: Partial<GenerationJob>): Promise<GenerationJob | undefined>;
+  deleteGenerationJob(id: number): Promise<void>;
+  getActiveGenerationJobs(): Promise<GenerationJob[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -275,6 +283,57 @@ export class DatabaseStorage implements IStorage {
       .update(adminUsers)
       .set({ lastLogin: new Date() })
       .where(eq(adminUsers.id, id));
+  }
+
+  // Generation queue methods
+  async createGenerationJob(insertJob: InsertGenerationJob): Promise<GenerationJob> {
+    const [job] = await db
+      .insert(generationJobs)
+      .values({
+        ...insertJob,
+        total: insertJob.questionCount, // Set total to the requested count
+      })
+      .returning();
+    return job;
+  }
+
+  async getGenerationJobs(): Promise<GenerationJob[]> {
+    return await db
+      .select()
+      .from(generationJobs)
+      .orderBy(desc(generationJobs.createdAt));
+  }
+
+  async getNextPendingJob(): Promise<GenerationJob | undefined> {
+    const [job] = await db
+      .select()
+      .from(generationJobs)
+      .where(eq(generationJobs.status, "pending"))
+      .orderBy(generationJobs.createdAt)
+      .limit(1);
+    return job || undefined;
+  }
+
+  async updateGenerationJob(id: number, updates: Partial<GenerationJob>): Promise<GenerationJob | undefined> {
+    const [job] = await db
+      .update(generationJobs)
+      .set(updates)
+      .where(eq(generationJobs.id, id))
+      .returning();
+    return job || undefined;
+  }
+
+  async deleteGenerationJob(id: number): Promise<void> {
+    await db
+      .delete(generationJobs)
+      .where(eq(generationJobs.id, id));
+  }
+
+  async getActiveGenerationJobs(): Promise<GenerationJob[]> {
+    return await db
+      .select()
+      .from(generationJobs)
+      .where(eq(generationJobs.status, "active"));
   }
 }
 

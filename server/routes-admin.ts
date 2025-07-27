@@ -4,6 +4,7 @@ import { twilioService } from './services/twilio.js';
 import { storage } from './storage.js';
 import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
 import { geminiService } from './services/gemini.js';
+import { insertGenerationJobSchema } from '@shared/schema';
 
 const router = Router();
 
@@ -172,6 +173,56 @@ router.post('/test-delivery', async (req, res) => {
   } catch (error) {
     console.error('Test delivery error:', error);
     res.status(500).json({ error: 'Failed to send test message' });
+  }
+});
+
+// Queue management endpoints
+router.post('/queue-generation', async (req, res) => {
+  try {
+    const validatedData = insertGenerationJobSchema.parse(req.body);
+    
+    // Check for duplicate pending jobs for same category
+    const existingJobs = await storage.getGenerationJobs();
+    const pendingJob = existingJobs.find(job => 
+      job.category === validatedData.category && 
+      job.status === 'pending'
+    );
+    
+    if (pendingJob) {
+      return res.status(400).json({ 
+        error: `A generation job for "${validatedData.category}" is already queued` 
+      });
+    }
+    
+    const job = await storage.createGenerationJob(validatedData);
+    res.json({ 
+      message: `Added ${validatedData.questionCount} questions for "${validatedData.category}" to queue`,
+      job 
+    });
+  } catch (error) {
+    console.error('Queue generation error:', error);
+    res.status(500).json({ error: 'Failed to add job to queue' });
+  }
+});
+
+router.get('/generation-queue', async (req, res) => {
+  try {
+    const jobs = await storage.getGenerationJobs();
+    res.json({ jobs });
+  } catch (error) {
+    console.error('Get queue error:', error);
+    res.status(500).json({ error: 'Failed to get generation queue' });
+  }
+});
+
+router.delete('/generation-queue/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    await storage.deleteGenerationJob(Number(id));
+    res.json({ message: 'Job removed from queue' });
+  } catch (error) {
+    console.error('Delete queue job error:', error);
+    res.status(500).json({ error: 'Failed to remove job from queue' });
   }
 });
 

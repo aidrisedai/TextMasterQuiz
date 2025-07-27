@@ -56,6 +56,19 @@ export const adminUsers = pgTable("admin_users", {
   lastLogin: timestamp("last_login"),
 });
 
+export const generationJobs = pgTable("generation_jobs", {
+  id: serial("id").primaryKey(),
+  category: text("category").notNull(),
+  questionCount: integer("question_count").notNull(),
+  status: text("status").notNull().default("pending"), // pending, active, completed, failed
+  progress: integer("progress").notNull().default(0),
+  total: integer("total"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   answers: many(userAnswers),
 }));
@@ -101,6 +114,13 @@ export const insertAdminUserSchema = createInsertSchema(adminUsers).omit({
   lastLogin: true,
 });
 
+export const insertGenerationJobSchema = createInsertSchema(generationJobs).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
@@ -109,3 +129,5 @@ export type InsertUserAnswer = z.infer<typeof insertUserAnswerSchema>;
 export type UserAnswer = typeof userAnswers.$inferSelect;
 export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
 export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertGenerationJob = z.infer<typeof insertGenerationJobSchema>;
+export type GenerationJob = typeof generationJobs.$inferSelect;
