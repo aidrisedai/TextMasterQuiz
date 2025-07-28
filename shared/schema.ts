@@ -170,7 +170,6 @@ export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({
 
 export const insertBroadcastDeliverySchema = createInsertSchema(broadcastDeliveries).omit({
   id: true,
-  sentAt: true,
 });
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -187,9 +186,3 @@ export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
 export type Broadcast = typeof broadcasts.$inferSelect;
 export type InsertBroadcastDelivery = z.infer<typeof insertBroadcastDeliverySchema>;
 export type BroadcastDelivery = typeof broadcastDeliveries.$inferSelect;
-export type InsertUserAnswer = z.infer<typeof insertUserAnswerSchema>;
-export type UserAnswer = typeof userAnswers.$inferSelect;
-export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
-export type AdminUser = typeof adminUsers.$inferSelect;
-export type InsertGenerationJob = z.infer<typeof insertGenerationJobSchema>;
-export type GenerationJob = typeof generationJobs.$inferSelect;

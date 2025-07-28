@@ -233,6 +233,12 @@ const broadcastMessageSchema = z.object({
   message: z.string().min(1, 'Message is required').max(1500, 'Message too long'),
 });
 
+const testBroadcastSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(1500, 'Message too long'),
+  testMode: z.boolean().default(false),
+  testPhoneNumbers: z.array(z.string()).optional(),
+});
+
 // Preview broadcast
 router.post('/broadcast/preview', async (req, res) => {
   try {
@@ -345,6 +351,182 @@ router.delete('/broadcast/:id', async (req, res) => {
   } catch (error) {
     console.error('Cancel broadcast error:', error);
     res.status(500).json({ error: 'Failed to cancel broadcast' });
+  }
+});
+
+// Test broadcast endpoints
+router.post('/broadcast/test-preview', async (req, res) => {
+  try {
+    const { message, testPhoneNumbers } = testBroadcastSchema.parse(req.body);
+    
+    // If specific test phone numbers are provided, use those
+    let recipientCount = 0;
+    if (testPhoneNumbers && testPhoneNumbers.length > 0) {
+      recipientCount = testPhoneNumbers.length;
+    } else {
+      // Otherwise, get actual eligible users count but won't send to them
+      const eligibleUsers = await storage.getBroadcastEligibleUsers();
+      recipientCount = eligibleUsers.length;
+    }
+    
+    const fullMessage = `[TEST MODE] ${message}\n\nReply STOP to unsubscribe from broadcasts.`;
+    
+    res.json({
+      recipientCount,
+      estimatedDuration: Math.ceil(recipientCount * 0.1), // 100ms per message in test mode
+      characterCount: fullMessage.length,
+      messagePreview: fullMessage,
+      testMode: true,
+      testPhoneNumbers: testPhoneNumbers || [],
+    });
+  } catch (error) {
+    console.error('Test broadcast preview error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+router.post('/broadcast/test-send', async (req, res) => {
+  try {
+    const { message, testPhoneNumbers } = testBroadcastSchema.parse(req.body);
+    
+    let recipients: string[] = [];
+    if (testPhoneNumbers && testPhoneNumbers.length > 0) {
+      recipients = testPhoneNumbers;
+    } else {
+      // Use a default test phone number or admin's number
+      recipients = ['+15153570454']; // Your test number
+    }
+    
+    const adminUsername = (req as any).user?.username || 'admin';
+    const testMessage = `[TEST MODE] ${message}\n\nThis is a test broadcast. No real users received this message.`;
+    
+    // Create a test broadcast record
+    const broadcast = await storage.createBroadcast({
+      message: `[TEST] ${message}`,
+      createdBy: adminUsername,
+      status: 'completed', // Mark as completed immediately for test
+      totalRecipients: recipients.length,
+      sentCount: recipients.length,
+      failedCount: 0,
+    });
+
+    // Send test messages to specified numbers only
+    const results = [];
+    for (const phoneNumber of recipients) {
+      try {
+        const success = await twilioService.sendSMS({
+          to: phoneNumber,
+          body: testMessage,
+        });
+        
+        results.push({
+          phoneNumber,
+          status: success ? 'sent' : 'failed',
+          message: success ? 'Test message sent successfully' : 'Failed to send test message'
+        });
+        
+        // Create delivery record for test
+        await storage.createBroadcastDelivery({
+          broadcastId: broadcast.id,
+          userId: 0, // Use 0 for test deliveries
+          status: success ? 'sent' : 'failed',
+          sentAt: success ? new Date() : undefined,
+          errorMessage: success ? undefined : 'Test delivery failed',
+        });
+      } catch (error) {
+        results.push({
+          phoneNumber,
+          status: 'failed',
+          message: error instanceof Error ? error.message : 'Unknown error'
+        });
+      }
+    }
+
+    res.json({
+      message: 'Test broadcast completed',
+      broadcast,
+      results,
+      testMode: true,
+      note: 'This was a test broadcast. Only specified test numbers received messages.'
+    });
+  } catch (error) {
+    console.error('Test broadcast error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Test broadcast failed' });
+  }
+});
+
+// Simulate broadcast delivery (no actual SMS sending)
+router.post('/broadcast/simulate', async (req, res) => {
+  try {
+    const { message } = broadcastMessageSchema.parse(req.body);
+    const adminUsername = (req as any).user?.username || 'admin';
+    
+    // Get eligible users for realistic simulation
+    const eligibleUsers = await storage.getBroadcastEligibleUsers();
+    
+    // Create simulation broadcast
+    const broadcast = await storage.createBroadcast({
+      message: `[SIMULATION] ${message}`,
+      createdBy: adminUsername,
+      status: 'active',
+      totalRecipients: eligibleUsers.length,
+    });
+
+    // Simulate delivery process
+    let sentCount = 0;
+    let failedCount = 0;
+    
+    for (let i = 0; i < eligibleUsers.length; i++) {
+      const user = eligibleUsers[i];
+      
+      // Simulate 95% success rate
+      const success = Math.random() > 0.05;
+      
+      await storage.createBroadcastDelivery({
+        broadcastId: broadcast.id,
+        userId: user.id,
+        status: success ? 'sent' : 'failed',
+        sentAt: success ? new Date() : undefined,
+        errorMessage: success ? undefined : 'Simulated delivery failure',
+      });
+      
+      if (success) {
+        sentCount++;
+      } else {
+        failedCount++;
+      }
+      
+      // Update progress every 10 users
+      if (i % 10 === 0) {
+        await storage.updateBroadcast(broadcast.id, {
+          sentCount,
+          failedCount,
+        });
+      }
+    }
+    
+    // Mark as completed
+    await storage.updateBroadcast(broadcast.id, {
+      status: 'completed',
+      completedAt: new Date(),
+      sentCount,
+      failedCount,
+    });
+
+    res.json({
+      message: 'Broadcast simulation completed',
+      broadcast: await storage.getBroadcast(broadcast.id),
+      simulation: {
+        totalUsers: eligibleUsers.length,
+        sentCount,
+        failedCount,
+        successRate: `${((sentCount / eligibleUsers.length) * 100).toFixed(1)}%`
+      },
+      note: 'This was a simulation. No actual SMS messages were sent to users.'
+    });
+  } catch (error) {
+    console.error('Simulate broadcast error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Simulation failed' });
   }
 });
 

@@ -112,6 +112,11 @@ const broadcastSchema = z.object({
   message: z.string().min(1, 'Message is required').max(1500, 'Message too long (max 1500 characters)'),
 });
 
+const testBroadcastSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(1500, 'Message too long (max 1500 characters)'),
+  testPhoneNumbers: z.string().optional(),
+});
+
 export default function AdminPage() {
   const [questions, setQuestions] = useState<Question[]>([]);
   const [stats, setStats] = useState<QuestionStats>({ totalQuestions: 0, categories: {} });
@@ -132,6 +137,8 @@ export default function AdminPage() {
   const [broadcastPreview, setBroadcastPreview] = useState<BroadcastPreview | null>(null);
   const [isPreviewLoading, setIsPreviewLoading] = useState(false);
   const [isBroadcastLoading, setIsBroadcastLoading] = useState(false);
+  const [isTestMode, setIsTestMode] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
   const { toast } = useToast();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -154,6 +161,14 @@ export default function AdminPage() {
     resolver: zodResolver(broadcastSchema),
     defaultValues: {
       message: "",
+    },
+  });
+
+  const testBroadcastForm = useForm<z.infer<typeof testBroadcastSchema>>({
+    resolver: zodResolver(testBroadcastSchema),
+    defaultValues: {
+      message: "",
+      testPhoneNumbers: "",
     },
   });
 
@@ -439,6 +454,78 @@ export default function AdminPage() {
         description: error instanceof Error ? error.message : "Failed to cancel broadcast",
         variant: "destructive",
       });
+    }
+  };
+
+  const testBroadcast = async (values: z.infer<typeof testBroadcastSchema>) => {
+    try {
+      setIsBroadcastLoading(true);
+      
+      // Parse phone numbers from string
+      const phoneNumbers = values.testPhoneNumbers 
+        ? values.testPhoneNumbers.split(',').map(num => num.trim()).filter(num => num)
+        : [];
+      
+      const response = await fetch('/api/admin/broadcast/test-send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: values.message,
+          testPhoneNumbers: phoneNumbers,
+        }),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Test Broadcast Sent",
+          description: `Test message sent to ${data.results?.length || 0} number(s). Check broadcast history for details.`,
+        });
+        testBroadcastForm.reset();
+        fetchBroadcasts();
+      } else {
+        throw new Error(data.error || 'Failed to send test broadcast');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to send test broadcast",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBroadcastLoading(false);
+    }
+  };
+
+  const simulateBroadcast = async (values: z.infer<typeof broadcastSchema>) => {
+    try {
+      setIsSimulating(true);
+      const response = await fetch('/api/admin/broadcast/simulate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Simulation Complete",
+          description: `Simulated broadcast to ${data.simulation?.totalUsers || 0} users. Success rate: ${data.simulation?.successRate || '0%'}`,
+        });
+        broadcastForm.reset();
+        setBroadcastPreview(null);
+        fetchBroadcasts();
+      } else {
+        throw new Error(data.error || 'Failed to simulate broadcast');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to simulate broadcast",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSimulating(false);
     }
   };
 
@@ -1197,12 +1284,118 @@ export default function AdminPage() {
         
         <TabsContent value="broadcast" className="space-y-4">
           <div className="grid gap-6">
+            {/* Test Mode Toggle */}
+            <Card className="border-orange-200 bg-orange-50">
+              <CardHeader>
+                <CardTitle className="text-orange-800">🧪 Testing & Safety Controls</CardTitle>
+                <p className="text-sm text-orange-700">
+                  Test broadcast functionality safely without sending messages to real users
+                </p>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-4 items-center">
+                  <Button
+                    variant={isTestMode ? "default" : "outline"}
+                    onClick={() => setIsTestMode(!isTestMode)}
+                    size="sm"
+                  >
+                    {isTestMode ? "Exit Test Mode" : "Enter Test Mode"}
+                  </Button>
+                  <span className="text-sm text-gray-600">
+                    {isTestMode 
+                      ? "🟢 Test mode active - Only specified numbers will receive messages" 
+                      : "⚠️ Production mode - Will send to all eligible users"
+                    }
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Test Broadcast Form */}
+            {isTestMode && (
+              <Card className="border-blue-200 bg-blue-50">
+                <CardHeader>
+                  <CardTitle className="text-blue-800">🧪 Test Broadcast</CardTitle>
+                  <p className="text-sm text-blue-700">
+                    Send test messages to specific phone numbers only
+                  </p>
+                </CardHeader>
+                <CardContent>
+                  <Form {...testBroadcastForm}>
+                    <form onSubmit={testBroadcastForm.handleSubmit(testBroadcast)} className="space-y-4">
+                      <FormField
+                        control={testBroadcastForm.control}
+                        name="message"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Test Message</FormLabel>
+                            <FormControl>
+                              <textarea
+                                {...field}
+                                placeholder="Enter your test message..."
+                                className="w-full min-h-[80px] p-3 border rounded-md resize-none"
+                                maxLength={1500}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={testBroadcastForm.control}
+                        name="testPhoneNumbers"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Test Phone Numbers (optional)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                placeholder="+15153570454, +1234567890 (comma-separated, leave empty for default)"
+                                className="w-full"
+                              />
+                            </FormControl>
+                            <p className="text-xs text-blue-600">
+                              Leave empty to use default test number. Messages will include [TEST MODE] prefix.
+                            </p>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="flex gap-3">
+                        <Button 
+                          type="submit" 
+                          disabled={isBroadcastLoading}
+                          variant="outline"
+                          className="border-blue-500 text-blue-700"
+                        >
+                          {isBroadcastLoading ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Sending Test...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-2" />
+                              Send Test Message
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            )}
+
             {/* Compose Broadcast */}
             <Card>
               <CardHeader>
                 <CardTitle>📢 Compose Broadcast Message</CardTitle>
                 <p className="text-sm text-gray-600">
-                  Send a message to all active users who accept broadcasts
+                  {isTestMode 
+                    ? "Test mode: Use simulation to preview broadcast behavior"
+                    : "Production mode: Send message to all active users who accept broadcasts"
+                  }
                 </p>
               </CardHeader>
               <CardContent>
@@ -1266,23 +1459,46 @@ export default function AdminPage() {
                     )}
 
                     <div className="flex gap-3">
-                      <Button 
-                        type="submit" 
-                        disabled={isBroadcastLoading || !broadcastPreview || broadcastPreview.recipientCount === 0}
-                        className="flex-1"
-                      >
-                        {isBroadcastLoading ? (
-                          <>
-                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-                            Creating Broadcast...
-                          </>
-                        ) : (
-                          <>
-                            <Send className="h-4 w-4 mr-2" />
-                            Send to {broadcastPreview?.recipientCount || 0} Users
-                          </>
-                        )}
-                      </Button>
+                      {isTestMode ? (
+                        <>
+                          <Button 
+                            type="button"
+                            onClick={() => simulateBroadcast(broadcastForm.getValues())}
+                            disabled={isSimulating || !broadcastPreview || broadcastPreview.recipientCount === 0}
+                            className="flex-1 bg-orange-600 hover:bg-orange-700"
+                          >
+                            {isSimulating ? (
+                              <>
+                                <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                                Simulating...
+                              </>
+                            ) : (
+                              <>
+                                <Database className="h-4 w-4 mr-2" />
+                                Simulate Broadcast (No SMS)
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <Button 
+                          type="submit" 
+                          disabled={isBroadcastLoading || !broadcastPreview || broadcastPreview.recipientCount === 0}
+                          className="flex-1 bg-red-600 hover:bg-red-700"
+                        >
+                          {isBroadcastLoading ? (
+                            <>
+                              <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                              Creating Broadcast...
+                            </>
+                          ) : (
+                            <>
+                              <Send className="h-4 w-4 mr-2" />
+                              Send to {broadcastPreview?.recipientCount || 0} Users
+                            </>
+                          )}
+                        </Button>
+                      )}
                       <Button 
                         type="button" 
                         variant="outline"
