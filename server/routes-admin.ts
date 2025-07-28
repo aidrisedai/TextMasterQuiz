@@ -4,7 +4,9 @@ import { twilioService } from './services/twilio.js';
 import { storage } from './storage.js';
 import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
 import { geminiService } from './services/gemini.js';
-import { insertGenerationJobSchema } from '@shared/schema';
+import { broadcastService } from './services/broadcast.js';
+import { insertGenerationJobSchema, insertBroadcastSchema } from '@shared/schema';
+import { z } from 'zod';
 
 const router = Router();
 
@@ -223,6 +225,126 @@ router.delete('/generation-queue/:id', async (req, res) => {
   } catch (error) {
     console.error('Delete queue job error:', error);
     res.status(500).json({ error: 'Failed to remove job from queue' });
+  }
+});
+
+// Broadcast management endpoints
+const broadcastMessageSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(1500, 'Message too long'),
+});
+
+// Preview broadcast
+router.post('/broadcast/preview', async (req, res) => {
+  try {
+    const { message } = broadcastMessageSchema.parse(req.body);
+    const preview = await broadcastService.previewBroadcast(message);
+    res.json(preview);
+  } catch (error) {
+    console.error('Broadcast preview error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// Create broadcast
+router.post('/broadcast/create', async (req, res) => {
+  try {
+    const { message } = broadcastMessageSchema.parse(req.body);
+    
+    // Check for recent broadcasts (cooldown)
+    const recentBroadcasts = await storage.getAllBroadcasts();
+    const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000);
+    const recentBroadcast = recentBroadcasts.find(b => 
+      new Date(b.createdAt) > oneHourAgo && b.status !== 'failed'
+    );
+    
+    if (recentBroadcast) {
+      return res.status(429).json({ 
+        error: 'Please wait at least 1 hour between broadcasts',
+        nextAllowedAt: new Date(new Date(recentBroadcast.createdAt).getTime() + 60 * 60 * 1000)
+      });
+    }
+
+    // Get admin username from session (assuming it's set in middleware)
+    const adminUsername = (req as any).user?.username || 'admin';
+    
+    const broadcast = await storage.createBroadcast({
+      message,
+      createdBy: adminUsername,
+      status: 'pending',
+    });
+
+    res.json({ 
+      message: 'Broadcast created and queued for processing',
+      broadcast 
+    });
+  } catch (error) {
+    console.error('Broadcast creation error:', error);
+    res.status(400).json({ error: error instanceof Error ? error.message : 'Invalid request' });
+  }
+});
+
+// Get broadcast status and details
+router.get('/broadcast/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const broadcast = await storage.getBroadcast(Number(id));
+    
+    if (!broadcast) {
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
+
+    const deliveries = await storage.getBroadcastDeliveries(Number(id));
+    
+    res.json({
+      broadcast,
+      deliveries,
+      stats: {
+        total: deliveries.length,
+        sent: deliveries.filter(d => d.status === 'sent').length,
+        failed: deliveries.filter(d => d.status === 'failed').length,
+        pending: deliveries.filter(d => d.status === 'pending').length,
+      }
+    });
+  } catch (error) {
+    console.error('Get broadcast error:', error);
+    res.status(500).json({ error: 'Failed to get broadcast details' });
+  }
+});
+
+// Get all broadcasts
+router.get('/broadcasts', async (req, res) => {
+  try {
+    const broadcasts = await storage.getAllBroadcasts();
+    res.json({ broadcasts });
+  } catch (error) {
+    console.error('Get broadcasts error:', error);
+    res.status(500).json({ error: 'Failed to get broadcasts' });
+  }
+});
+
+// Cancel pending broadcast
+router.delete('/broadcast/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const broadcast = await storage.getBroadcast(Number(id));
+    
+    if (!broadcast) {
+      return res.status(404).json({ error: 'Broadcast not found' });
+    }
+    
+    if (broadcast.status !== 'pending') {
+      return res.status(400).json({ error: 'Can only cancel pending broadcasts' });
+    }
+
+    await storage.updateBroadcast(Number(id), {
+      status: 'cancelled',
+      completedAt: new Date(),
+    });
+
+    res.json({ message: 'Broadcast cancelled successfully' });
+  } catch (error) {
+    console.error('Cancel broadcast error:', error);
+    res.status(500).json({ error: 'Failed to cancel broadcast' });
   }
 });
 

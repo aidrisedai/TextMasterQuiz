@@ -1,6 +1,7 @@
-// Queue processor service for handling generation jobs
+// Queue processor service for handling generation jobs and broadcasts
 import { storage } from '../storage.js';
 import { generateQuestionsForCategory } from '../scripts/generate-questions.js';
+import { broadcastService } from './broadcast.js';
 
 class QueueProcessor {
   private isProcessing = false;
@@ -32,20 +33,30 @@ class QueueProcessor {
     try {
       this.isProcessing = true;
       
-      // Check for pending jobs
+      // Check for pending generation jobs
       const job = await storage.getNextPendingJob();
-      if (!job) return;
+      if (job) {
+        console.log(`Processing generation job: ${job.category} (${job.questionCount} questions)`);
+        
+        // Mark job as active
+        await storage.updateGenerationJob(job.id, {
+          status: 'active',
+          startedAt: new Date(),
+        });
 
-      console.log(`Processing generation job: ${job.category} (${job.questionCount} questions)`);
-      
-      // Mark job as active
-      await storage.updateGenerationJob(job.id, {
-        status: 'active',
-        startedAt: new Date(),
-      });
+        // Generate questions with progress tracking
+        await this.generateWithProgress(job);
+        return;
+      }
 
-      // Generate questions with progress tracking
-      await this.generateWithProgress(job);
+      // Check for pending broadcasts
+      const broadcasts = await storage.getAllBroadcasts();
+      const pendingBroadcast = broadcasts.find(b => b.status === 'pending');
+      if (pendingBroadcast) {
+        console.log(`Processing broadcast: ${pendingBroadcast.id}`);
+        await broadcastService.processBroadcast(pendingBroadcast.id);
+        return;
+      }
 
     } catch (error) {
       console.error('Queue processing error:', error);

@@ -1,4 +1,4 @@
-import { users, questions, userAnswers, adminUsers, generationJobs, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob } from "@shared/schema";
+import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
 
@@ -46,6 +46,16 @@ export interface IStorage {
   updateGenerationJob(id: number, updates: Partial<GenerationJob>): Promise<GenerationJob | undefined>;
   deleteGenerationJob(id: number): Promise<void>;
   getActiveGenerationJobs(): Promise<GenerationJob[]>;
+  
+  // Broadcast methods
+  createBroadcast(broadcast: InsertBroadcast): Promise<Broadcast>;
+  getBroadcast(id: number): Promise<Broadcast | undefined>;
+  getAllBroadcasts(): Promise<Broadcast[]>;
+  updateBroadcast(id: number, updates: Partial<Broadcast>): Promise<Broadcast | undefined>;
+  getBroadcastEligibleUsers(): Promise<User[]>;
+  createBroadcastDelivery(delivery: InsertBroadcastDelivery): Promise<BroadcastDelivery>;
+  updateBroadcastDelivery(id: number, updates: Partial<BroadcastDelivery>): Promise<BroadcastDelivery | undefined>;
+  getBroadcastDeliveries(broadcastId: number): Promise<(BroadcastDelivery & { user: User })[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -384,6 +394,80 @@ export class DatabaseStorage implements IStorage {
       .select()
       .from(generationJobs)
       .where(eq(generationJobs.status, "active"));
+  }
+
+  // Broadcast methods
+  async createBroadcast(insertBroadcast: InsertBroadcast): Promise<Broadcast> {
+    const [broadcast] = await db
+      .insert(broadcasts)
+      .values(insertBroadcast)
+      .returning();
+    return broadcast;
+  }
+
+  async getBroadcast(id: number): Promise<Broadcast | undefined> {
+    const [broadcast] = await db.select().from(broadcasts).where(eq(broadcasts.id, id));
+    return broadcast || undefined;
+  }
+
+  async getAllBroadcasts(): Promise<Broadcast[]> {
+    return await db
+      .select()
+      .from(broadcasts)
+      .orderBy(desc(broadcasts.createdAt));
+  }
+
+  async updateBroadcast(id: number, updates: Partial<Broadcast>): Promise<Broadcast | undefined> {
+    const [broadcast] = await db
+      .update(broadcasts)
+      .set(updates)
+      .where(eq(broadcasts.id, id))
+      .returning();
+    return broadcast || undefined;
+  }
+
+  async getBroadcastEligibleUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(and(
+        eq(users.isActive, true),
+        eq(users.acceptsBroadcasts, true)
+      ));
+  }
+
+  async createBroadcastDelivery(insertDelivery: InsertBroadcastDelivery): Promise<BroadcastDelivery> {
+    const [delivery] = await db
+      .insert(broadcastDeliveries)
+      .values(insertDelivery)
+      .returning();
+    return delivery;
+  }
+
+  async updateBroadcastDelivery(id: number, updates: Partial<BroadcastDelivery>): Promise<BroadcastDelivery | undefined> {
+    const [delivery] = await db
+      .update(broadcastDeliveries)
+      .set(updates)
+      .where(eq(broadcastDeliveries.id, id))
+      .returning();
+    return delivery || undefined;
+  }
+
+  async getBroadcastDeliveries(broadcastId: number): Promise<(BroadcastDelivery & { user: User })[]> {
+    return await db
+      .select({
+        id: broadcastDeliveries.id,
+        broadcastId: broadcastDeliveries.broadcastId,
+        userId: broadcastDeliveries.userId,
+        status: broadcastDeliveries.status,
+        sentAt: broadcastDeliveries.sentAt,
+        errorMessage: broadcastDeliveries.errorMessage,
+        user: users
+      })
+      .from(broadcastDeliveries)
+      .innerJoin(users, eq(broadcastDeliveries.userId, users.id))
+      .where(eq(broadcastDeliveries.broadcastId, broadcastId))
+      .orderBy(broadcastDeliveries.id);
   }
 }
 

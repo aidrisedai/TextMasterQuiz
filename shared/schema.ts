@@ -18,6 +18,7 @@ export const users = pgTable("users", {
   isActive: boolean("is_active").notNull().default(true),
   questionsAnswered: integer("questions_answered").notNull().default(0),
   correctAnswers: integer("correct_answers").notNull().default(0),
+  acceptsBroadcasts: boolean("accepts_broadcasts").notNull().default(true),
 });
 
 export const questions = pgTable("questions", {
@@ -69,8 +70,32 @@ export const generationJobs = pgTable("generation_jobs", {
   completedAt: timestamp("completed_at"),
 });
 
+export const broadcasts = pgTable("broadcasts", {
+  id: serial("id").primaryKey(),
+  message: text("message").notNull(),
+  createdBy: text("created_by").notNull(), // admin username
+  status: text("status").notNull().default("pending"), // pending, active, completed, failed, cancelled
+  totalRecipients: integer("total_recipients").notNull().default(0),
+  sentCount: integer("sent_count").notNull().default(0),
+  failedCount: integer("failed_count").notNull().default(0),
+  estimatedDuration: integer("estimated_duration"), // minutes
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+  startedAt: timestamp("started_at"),
+  completedAt: timestamp("completed_at"),
+});
+
+export const broadcastDeliveries = pgTable("broadcast_deliveries", {
+  id: serial("id").primaryKey(),
+  broadcastId: integer("broadcast_id").notNull().references(() => broadcasts.id),
+  userId: integer("user_id").notNull().references(() => users.id),
+  status: text("status").notNull().default("pending"), // pending, sent, failed
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+});
+
 export const usersRelations = relations(users, ({ many }) => ({
   answers: many(userAnswers),
+  broadcastDeliveries: many(broadcastDeliveries),
 }));
 
 export const questionsRelations = relations(questions, ({ many }) => ({
@@ -85,6 +110,21 @@ export const userAnswersRelations = relations(userAnswers, ({ one }) => ({
   question: one(questions, {
     fields: [userAnswers.questionId],
     references: [questions.id],
+  }),
+}));
+
+export const broadcastsRelations = relations(broadcasts, ({ many }) => ({
+  deliveries: many(broadcastDeliveries),
+}));
+
+export const broadcastDeliveriesRelations = relations(broadcastDeliveries, ({ one }) => ({
+  broadcast: one(broadcasts, {
+    fields: [broadcastDeliveries.broadcastId],
+    references: [broadcasts.id],
+  }),
+  user: one(users, {
+    fields: [broadcastDeliveries.userId],
+    references: [users.id],
   }),
 }));
 
@@ -121,10 +161,32 @@ export const insertGenerationJobSchema = createInsertSchema(generationJobs).omit
   completedAt: true,
 });
 
+export const insertBroadcastSchema = createInsertSchema(broadcasts).omit({
+  id: true,
+  createdAt: true,
+  startedAt: true,
+  completedAt: true,
+});
+
+export const insertBroadcastDeliverySchema = createInsertSchema(broadcastDeliveries).omit({
+  id: true,
+  sentAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
 export type Question = typeof questions.$inferSelect;
+export type InsertUserAnswer = z.infer<typeof insertUserAnswerSchema>;
+export type UserAnswer = typeof userAnswers.$inferSelect;
+export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;
+export type AdminUser = typeof adminUsers.$inferSelect;
+export type InsertGenerationJob = z.infer<typeof insertGenerationJobSchema>;
+export type GenerationJob = typeof generationJobs.$inferSelect;
+export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
+export type Broadcast = typeof broadcasts.$inferSelect;
+export type InsertBroadcastDelivery = z.infer<typeof insertBroadcastDeliverySchema>;
+export type BroadcastDelivery = typeof broadcastDeliveries.$inferSelect;
 export type InsertUserAnswer = z.infer<typeof insertUserAnswerSchema>;
 export type UserAnswer = typeof userAnswers.$inferSelect;
 export type InsertAdminUser = z.infer<typeof insertAdminUserSchema>;

@@ -9,7 +9,7 @@ import { Separator } from '../components/ui/separator';
 import { Input } from '../components/ui/input';
 import { Label } from '../components/ui/label';
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '../components/ui/form';
-import { RefreshCw, Plus, Database, MessageSquare, LogIn, LogOut, User } from 'lucide-react';
+import { RefreshCw, Plus, Database, MessageSquare, LogIn, LogOut, User, Send } from 'lucide-react';
 import { useToast } from '../hooks/use-toast';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -77,6 +77,27 @@ interface GenerationJob {
   completedAt: string | null;
 }
 
+interface Broadcast {
+  id: number;
+  message: string;
+  createdBy: string;
+  status: 'pending' | 'active' | 'completed' | 'failed' | 'cancelled';
+  totalRecipients: number;
+  sentCount: number;
+  failedCount: number;
+  estimatedDuration: number | null;
+  createdAt: string;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
+interface BroadcastPreview {
+  recipientCount: number;
+  estimatedDuration: number;
+  characterCount: number;
+  messagePreview: string;
+}
+
 const queueGenerationSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   questionCount: z.number().min(1).max(100, 'Maximum 100 questions per job'),
@@ -85,6 +106,10 @@ const queueGenerationSchema = z.object({
 const loginSchema = z.object({
   username: z.string().min(1, "Username is required"),
   password: z.string().min(1, "Password is required"),
+});
+
+const broadcastSchema = z.object({
+  message: z.string().min(1, 'Message is required').max(1500, 'Message too long (max 1500 characters)'),
 });
 
 export default function AdminPage() {
@@ -103,6 +128,10 @@ export default function AdminPage() {
   const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
   const [generationJobs, setGenerationJobs] = useState<GenerationJob[]>([]);
   const [isGenerationLoading, setIsGenerationLoading] = useState(false);
+  const [broadcasts, setBroadcasts] = useState<Broadcast[]>([]);
+  const [broadcastPreview, setBroadcastPreview] = useState<BroadcastPreview | null>(null);
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  const [isBroadcastLoading, setIsBroadcastLoading] = useState(false);
   const { toast } = useToast();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -118,6 +147,13 @@ export default function AdminPage() {
     defaultValues: {
       category: "",
       questionCount: 20,
+    },
+  });
+
+  const broadcastForm = useForm<z.infer<typeof broadcastSchema>>({
+    resolver: zodResolver(broadcastSchema),
+    defaultValues: {
+      message: "",
     },
   });
 
@@ -298,6 +334,114 @@ export default function AdminPage() {
     }
   };
 
+  const fetchBroadcasts = async () => {
+    try {
+      const response = await fetch('/api/admin/broadcasts');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setBroadcasts(data.broadcasts || []);
+      } else {
+        throw new Error(data.error || 'Failed to fetch broadcasts');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to load broadcasts",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const previewBroadcast = async (message: string) => {
+    if (!message.trim()) {
+      setBroadcastPreview(null);
+      return;
+    }
+
+    try {
+      setIsPreviewLoading(true);
+      const response = await fetch('/api/admin/broadcast/preview', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message }),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        setBroadcastPreview(data);
+      } else {
+        throw new Error(data.error || 'Failed to preview broadcast');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to preview broadcast",
+        variant: "destructive",
+      });
+      setBroadcastPreview(null);
+    } finally {
+      setIsPreviewLoading(false);
+    }
+  };
+
+  const createBroadcast = async (values: z.infer<typeof broadcastSchema>) => {
+    try {
+      setIsBroadcastLoading(true);
+      const response = await fetch('/api/admin/broadcast/create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(values),
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: `Broadcast created and queued for delivery to ${broadcastPreview?.recipientCount || 0} users`,
+        });
+        broadcastForm.reset();
+        setBroadcastPreview(null);
+        fetchBroadcasts();
+      } else {
+        throw new Error(data.error || 'Failed to create broadcast');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to create broadcast",
+        variant: "destructive",
+      });
+    } finally {
+      setIsBroadcastLoading(false);
+    }
+  };
+
+  const cancelBroadcast = async (id: number) => {
+    try {
+      const response = await fetch(`/api/admin/broadcast/${id}`, {
+        method: 'DELETE',
+      });
+      const data = await response.json();
+      
+      if (response.ok) {
+        toast({
+          title: "Success",
+          description: "Broadcast cancelled successfully",
+        });
+        fetchBroadcasts();
+      } else {
+        throw new Error(data.error || 'Failed to cancel broadcast');
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to cancel broadcast",
+        variant: "destructive",
+      });
+    }
+  };
+
   const testSMS = async () => {
     try {
       const response = await fetch('/api/admin/test-delivery', {
@@ -424,8 +568,20 @@ export default function AdminPage() {
       if (activeTab === 'users') {
         fetchUsers();
       }
+      if (activeTab === 'broadcast') {
+        fetchBroadcasts();
+      }
     }
   }, [selectedCategory, authStatus.authenticated, activeTab]);
+
+  // Watch message changes for live preview
+  const messageValue = broadcastForm.watch('message');
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      previewBroadcast(messageValue);
+    }, 500);
+    return () => clearTimeout(timeoutId);
+  }, [messageValue]);
 
   // Poll for queue updates every 3 seconds
   useEffect(() => {
@@ -600,6 +756,7 @@ export default function AdminPage() {
           <TabsTrigger value="questions" className="flex-1">Questions</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="generation" className="flex-1">Generation</TabsTrigger>
+          <TabsTrigger value="broadcast" className="flex-1">Broadcast</TabsTrigger>
           <TabsTrigger value="categories" className="flex-1">Categories</TabsTrigger>
         </TabsList>
         
@@ -1025,6 +1182,216 @@ export default function AdminPage() {
                               <>
                                 <br />
                                 Completed: {new Date(job.completedAt).toLocaleString()}
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </ScrollArea>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+        
+        <TabsContent value="broadcast" className="space-y-4">
+          <div className="grid gap-6">
+            {/* Compose Broadcast */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📢 Compose Broadcast Message</CardTitle>
+                <p className="text-sm text-gray-600">
+                  Send a message to all active users who accept broadcasts
+                </p>
+              </CardHeader>
+              <CardContent>
+                <Form {...broadcastForm}>
+                  <form onSubmit={broadcastForm.handleSubmit(createBroadcast)} className="space-y-4">
+                    <FormField
+                      control={broadcastForm.control}
+                      name="message"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Message Content</FormLabel>
+                          <FormControl>
+                            <textarea
+                              {...field}
+                              placeholder="Enter your broadcast message..."
+                              className="w-full min-h-[120px] p-3 border rounded-md resize-none"
+                              maxLength={1500}
+                            />
+                          </FormControl>
+                          <div className="flex justify-between text-sm text-gray-500">
+                            <span>Characters: {field.value?.length || 0}/1500</span>
+                            <span>Note: "Reply STOP to unsubscribe" will be auto-added</span>
+                          </div>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    
+                    {/* Live Preview */}
+                    {broadcastPreview && (
+                      <div className="border rounded-lg p-4 bg-gray-50 space-y-3">
+                        <h4 className="font-medium text-gray-800">📋 Preview</h4>
+                        <div className="grid grid-cols-2 gap-4 text-sm">
+                          <div>
+                            <span className="font-medium">Recipients:</span>
+                            <span className="ml-2 text-blue-600">{broadcastPreview.recipientCount} users</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Est. Duration:</span>
+                            <span className="ml-2 text-orange-600">{broadcastPreview.estimatedDuration} minutes</span>
+                          </div>
+                          <div>
+                            <span className="font-medium">Message Length:</span>
+                            <span className="ml-2">{broadcastPreview.characterCount} characters</span>
+                          </div>
+                        </div>
+                        <div className="border-t pt-3">
+                          <span className="font-medium text-gray-700">Full Message Preview:</span>
+                          <div className="mt-2 p-3 bg-white border rounded text-sm">
+                            {broadcastPreview.messagePreview}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {isPreviewLoading && (
+                      <div className="flex items-center text-sm text-gray-500">
+                        <RefreshCw className="h-4 w-4 animate-spin mr-2" />
+                        Generating preview...
+                      </div>
+                    )}
+
+                    <div className="flex gap-3">
+                      <Button 
+                        type="submit" 
+                        disabled={isBroadcastLoading || !broadcastPreview || broadcastPreview.recipientCount === 0}
+                        className="flex-1"
+                      >
+                        {isBroadcastLoading ? (
+                          <>
+                            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                            Creating Broadcast...
+                          </>
+                        ) : (
+                          <>
+                            <Send className="h-4 w-4 mr-2" />
+                            Send to {broadcastPreview?.recipientCount || 0} Users
+                          </>
+                        )}
+                      </Button>
+                      <Button 
+                        type="button" 
+                        variant="outline"
+                        onClick={() => {
+                          broadcastForm.reset();
+                          setBroadcastPreview(null);
+                        }}
+                      >
+                        Clear
+                      </Button>
+                    </div>
+                  </form>
+                </Form>
+              </CardContent>
+            </Card>
+
+            {/* Broadcast History */}
+            <Card>
+              <CardHeader>
+                <CardTitle>📊 Broadcast History</CardTitle>
+                <p className="text-sm text-gray-600">Previous broadcast campaigns and their status</p>
+              </CardHeader>
+              <CardContent>
+                {broadcasts.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    No broadcasts sent yet
+                  </div>
+                ) : (
+                  <ScrollArea className="h-96">
+                    <div className="space-y-4">
+                      {broadcasts.map(broadcast => (
+                        <div key={broadcast.id} className="border rounded-lg p-4 space-y-3">
+                          <div className="flex justify-between items-start">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-2">
+                                <Badge 
+                                  variant={
+                                    broadcast.status === 'completed' ? 'default' :
+                                    broadcast.status === 'active' ? 'secondary' :
+                                    broadcast.status === 'cancelled' ? 'outline' :
+                                    broadcast.status === 'failed' ? 'destructive' : 'outline'
+                                  }
+                                >
+                                  {broadcast.status}
+                                </Badge>
+                                <span className="text-sm text-gray-500">
+                                  by {broadcast.createdBy}
+                                </span>
+                              </div>
+                              <p className="text-sm font-mono bg-gray-100 p-2 rounded">
+                                {broadcast.message.length > 100 
+                                  ? `${broadcast.message.substring(0, 100)}...` 
+                                  : broadcast.message
+                                }
+                              </p>
+                            </div>
+                            {broadcast.status === 'pending' && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => cancelBroadcast(broadcast.id)}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </div>
+                          
+                          <div className="grid grid-cols-2 gap-4 text-sm">
+                            <div>
+                              <span className="font-medium">Recipients:</span>
+                              <span className="ml-2">{broadcast.totalRecipients || 0}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Sent:</span>
+                              <span className="ml-2 text-green-600">{broadcast.sentCount || 0}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Failed:</span>
+                              <span className="ml-2 text-red-600">{broadcast.failedCount || 0}</span>
+                            </div>
+                            <div>
+                              <span className="font-medium">Duration:</span>
+                              <span className="ml-2">{broadcast.estimatedDuration || 0} min</span>
+                            </div>
+                          </div>
+                          
+                          {broadcast.status === 'active' && (
+                            <div className="space-y-2">
+                              <div className="flex justify-between text-sm">
+                                <span>Progress</span>
+                                <span>{(broadcast.sentCount || 0) + (broadcast.failedCount || 0)}/{broadcast.totalRecipients || 0}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2">
+                                <div 
+                                  className="bg-blue-600 h-2 rounded-full transition-all"
+                                  style={{ 
+                                    width: `${(((broadcast.sentCount || 0) + (broadcast.failedCount || 0)) / (broadcast.totalRecipients || 1)) * 100}%` 
+                                  }}
+                                />
+                              </div>
+                            </div>
+                          )}
+                          
+                          <div className="text-xs text-gray-500">
+                            Created: {new Date(broadcast.createdAt).toLocaleString()}
+                            {broadcast.completedAt && (
+                              <>
+                                <br />
+                                Completed: {new Date(broadcast.completedAt).toLocaleString()}
                               </>
                             )}
                           </div>
