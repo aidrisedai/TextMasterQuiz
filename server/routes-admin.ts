@@ -178,6 +178,89 @@ router.post('/test-delivery', async (req, res) => {
   }
 });
 
+// Fix delivery for affected users - Reset lastQuizDate for users stuck with old dates
+router.post('/fix-delivery', async (req, res) => {
+  try {
+    console.log('🔧 Starting delivery fix for affected users...');
+    
+    // Find users with old lastQuizDate (before yesterday)
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const affectedUsers = await storage.getAllUsers();
+    const usersToFix = affectedUsers.filter(user => 
+      user.isActive && 
+      user.lastQuizDate && 
+      new Date(user.lastQuizDate) < yesterday
+    );
+    
+    console.log(`Found ${usersToFix.length} users needing delivery fix`);
+    
+    // Reset lastQuizDate for these users to make them eligible for delivery
+    const fixedUsers = [];
+    for (const user of usersToFix) {
+      await storage.updateUser(user.id, { lastQuizDate: null });
+      fixedUsers.push({
+        phoneNumber: user.phoneNumber,
+        oldLastQuizDate: user.lastQuizDate,
+        streak: user.currentStreak
+      });
+      console.log(`✅ Fixed delivery for ${user.phoneNumber} (was stuck at ${user.lastQuizDate})`);
+    }
+    
+    // Clean up any orphaned pending answers
+    const cleanedUp = await storage.cleanupOrphanedPendingAnswers();
+    console.log(`🧹 Cleaned up ${cleanedUp} orphaned pending answers`);
+    
+    res.json({ 
+      message: `Fixed delivery for ${fixedUsers.length} affected users`,
+      fixedUsers,
+      cleanedUpRecords: cleanedUp
+    });
+    
+  } catch (error) {
+    console.error('Fix delivery error:', error);
+    res.status(500).json({ error: 'Failed to fix delivery' });
+  }
+});
+
+// Manual question delivery for specific user (bypass time restrictions)
+router.post('/manual-question-delivery', async (req, res) => {
+  try {
+    const { phoneNumber } = req.body;
+    
+    if (!phoneNumber) {
+      return res.status(400).json({ error: 'Phone number is required' });
+    }
+    
+    console.log(`🎯 Manual question delivery to ${phoneNumber}`);
+    
+    // Import scheduler service dynamically
+    const { schedulerService } = await import('./services/scheduler.js');
+    
+    // Get user and send question directly
+    const user = await storage.getUserByPhoneNumber(phoneNumber);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // Send question directly using scheduler
+    await schedulerService.sendQuestionToUser(user);
+    
+    res.json({ 
+      message: 'Question sent successfully',
+      user: {
+        phoneNumber: user.phoneNumber,
+        questionsAnswered: user.questionsAnswered + 1
+      }
+    });
+    
+  } catch (error) {
+    console.error('Manual delivery error:', error);
+    res.status(500).json({ error: error.message || 'Failed to send question manually' });
+  }
+});
+
 // Queue management endpoints
 router.post('/queue-generation', async (req, res) => {
   try {
