@@ -82,13 +82,11 @@ export class SchedulerService {
           
           console.log(`🕐 User ${user.phoneNumber}: Current hour in ${userTimezone} is ${userCurrentHour}, preferred hour is ${preferredHour}`);
           
-          // Check if current time matches user's preferred time
-          if (userCurrentHour === preferredHour) {
-            const canReceive = await this.shouldUserReceiveQuestion(user, currentTime);
-            if (canReceive) {
-              console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
-              usersToSend.push(user);
-            }
+          // Check if user needs a question (current hour matches OR they're overdue)
+          const needsQuestion = await this.userNeedsQuestionNow(user, userCurrentHour, preferredHour, currentTime);
+          if (needsQuestion) {
+            console.log(`✅ User ${user.phoneNumber} needs daily question (${user.preferredTime} in ${userTimezone})`);
+            usersToSend.push(user);
           }
         } catch (error) {
           console.error(`Error processing user ${user.id}:`, error);
@@ -111,6 +109,27 @@ export class SchedulerService {
     
     const hour = formatter.format(date);
     return parseInt(hour, 10);
+  }
+
+  private async userNeedsQuestionNow(user: any, currentHour: number, preferredHour: number, currentTime: Date): Promise<boolean> {
+    // Check if it's the preferred hour OR if they're overdue and haven't received today
+    const isPreferredHour = currentHour === preferredHour;
+    const isOverdue = !user.lastQuizDate || !this.hasReceivedToday(user, currentTime);
+    
+    if (!isPreferredHour && !isOverdue) {
+      return false;
+    }
+    
+    // Now check if they should receive a question
+    return await this.shouldUserReceiveQuestion(user, currentTime);
+  }
+  
+  private hasReceivedToday(user: any, currentTime: Date): boolean {
+    if (!user.lastQuizDate) return false;
+    
+    const userTimezone = user.timezone || 'America/Los_Angeles';
+    const lastQuizInUserTZ = new Date(user.lastQuizDate);
+    return this.isSameDayInTimezone(currentTime, lastQuizInUserTZ, userTimezone);
   }
 
   private async shouldUserReceiveQuestion(user: any, currentTime: Date): Promise<boolean> {
