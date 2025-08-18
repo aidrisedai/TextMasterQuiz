@@ -22,32 +22,43 @@ export class SchedulerService {
       }
     });
     
-    // For testing: run every 5 minutes to test the system (disabled in production)
-    // cron.schedule('*/5 * * * *', async () => {
-    //   console.log('🧪 Testing scheduler - checking for users needing questions...');
-    //   await this.sendDailyQuestions();
-    // });
+    // For testing: run every 5 minutes to test the system (enabled for debugging)
+    cron.schedule('*/5 * * * *', async () => {
+      console.log('🧪 Testing scheduler - checking for users needing questions...');
+      await this.sendDailyQuestions();
+    });
 
     console.log('Scheduler service initialized');
   }
 
   private async sendDailyQuestions() {
     try {
-      console.log('Checking for users who need daily questions...');
+      console.log('🔍 Checking for users who need daily questions...');
       
       // Get current time in different timezones and find matching users
       const now = new Date();
+      console.log(`⏰ Current time: ${now.toISOString()}`);
+      
       const users = await this.getUsersForCurrentTime(now);
+      console.log(`📋 Found ${users.length} users needing questions`);
+      
+      if (users.length === 0) {
+        console.log('ℹ️  No users need questions at this time');
+        return;
+      }
       
       for (const user of users) {
         try {
+          console.log(`📤 Sending question to ${user.phoneNumber}...`);
           await this.sendQuestionToUser(user);
+          console.log(`✅ Question sent to ${user.phoneNumber}`);
         } catch (error) {
-          console.error(`Failed to send question to user ${user.id}:`, error);
+          console.error(`❌ Failed to send question to user ${user.id}:`, error);
         }
       }
+      console.log(`📊 Delivery batch complete: ${users.length} users processed`);
     } catch (error) {
-      console.error('Error in sendDailyQuestions:', error);
+      console.error('💥 Error in sendDailyQuestions:', error);
     }
   }
 
