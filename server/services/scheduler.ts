@@ -22,11 +22,11 @@ export class SchedulerService {
       }
     });
     
-    // EMERGENCY: Run every minute to catch up on missed deliveries
-    cron.schedule('* * * * *', async () => {
-      console.log('🚨 EMERGENCY SCHEDULER - checking for overdue users...');
-      await this.sendDailyQuestions();
-    });
+    // Disabled emergency scheduler - reverting to normal operation
+    // cron.schedule('* * * * *', async () => {
+    //   console.log('🚨 EMERGENCY SCHEDULER - checking for overdue users...');
+    //   await this.sendDailyQuestions();
+    // });
 
     console.log('Scheduler service initialized');
   }
