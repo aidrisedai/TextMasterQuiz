@@ -22,9 +22,9 @@ export class SchedulerService {
       }
     });
     
-    // For testing: run every 5 minutes to test the system (enabled for debugging)
-    cron.schedule('*/5 * * * *', async () => {
-      console.log('🧪 Testing scheduler - checking for users needing questions...');
+    // EMERGENCY: Run every minute to catch up on missed deliveries
+    cron.schedule('* * * * *', async () => {
+      console.log('🚨 EMERGENCY SCHEDULER - checking for overdue users...');
       await this.sendDailyQuestions();
     });
 
