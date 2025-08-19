@@ -112,11 +112,10 @@ export class SchedulerService {
   }
 
   private async userNeedsQuestionNow(user: any, currentHour: number, preferredHour: number, currentTime: Date): Promise<boolean> {
-    // Check if it's the preferred hour OR if they're overdue and haven't received today
+    // Only send at the preferred hour - no more "catch up" logic
     const isPreferredHour = currentHour === preferredHour;
-    const isOverdue = !user.lastQuizDate || !this.hasReceivedToday(user, currentTime);
     
-    if (!isPreferredHour && !isOverdue) {
+    if (!isPreferredHour) {
       return false;
     }
     
