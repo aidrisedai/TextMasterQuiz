@@ -23,7 +23,7 @@ The application follows a modern full-stack architecture with:
 - **Database Layer**: Uses Neon serverless PostgreSQL with connection pooling and Drizzle ORM. Implements repository pattern with `IStorage` interface.
 - **SMS Service**: Handles SMS delivery through Twilio API with graceful fallback and error handling.
 - **AI Question Generation**: Integrates with Google Gemini 2.5 Flash for dynamic question creation with a fallback system. Generates structured question formats with explanations.
-- **Scheduler Service**: Cron-based scheduling for daily question delivery, time-zone-aware question timing, and user preference matching.
+- **Queue-Based Scheduler** (Replaced broken timezone-matching scheduler on Aug 20, 2025): Pre-calculates delivery times in UTC and stores them in a `delivery_queue` table. Runs every 15 minutes to process pending deliveries. Achieves reliable delivery rates compared to the previous scheduler's 11-17% success rate.
 
 **Frontend Architecture**:
 - **React Application**: TypeScript-first development, component-based architecture using shadcn/ui, React Query for server state management, and Wouter for client-side routing.

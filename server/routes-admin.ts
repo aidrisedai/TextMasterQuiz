@@ -5,6 +5,7 @@ import { storage } from './storage.js';
 import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
 import { geminiService } from './services/gemini.js';
 import { broadcastService } from './services/broadcast.js';
+import { queueScheduler } from './services/queue-scheduler.js';
 import { insertGenerationJobSchema, insertBroadcastSchema } from '@shared/schema';
 import { z } from 'zod';
 
@@ -610,6 +611,141 @@ router.post('/broadcast/simulate', async (req, res) => {
   } catch (error) {
     console.error('Simulate broadcast error:', error);
     res.status(400).json({ error: error instanceof Error ? error.message : 'Simulation failed' });
+  }
+});
+
+// Manual trigger for delivery queue processing
+router.post('/trigger-queue', async (req, res) => {
+  try {
+    console.log('🔧 Manual queue trigger requested...');
+    
+    // Get current queue status
+    const todayStatus = await storage.getTodayDeliveryStatus();
+    const pending = todayStatus.filter(d => d.status === 'pending');
+    const sent = todayStatus.filter(d => d.status === 'sent');
+    const failed = todayStatus.filter(d => d.status === 'failed');
+    
+    // Process the queue manually
+    const processDeliveryQueue = async () => {
+      const now = new Date();
+      const deliveries = await storage.getDeliveriesToSend(now);
+      
+      console.log(`📬 Found ${deliveries.length} deliveries to process`);
+      
+      let processedCount = 0;
+      let errorCount = 0;
+      
+      for (const delivery of deliveries) {
+        try {
+          // Get user details
+          const user = await storage.getUser(delivery.userId);
+          if (!user || !user.isActive) {
+            await storage.markDeliveryAsFailed(delivery.id, 'User not found or inactive');
+            errorCount++;
+            continue;
+          }
+          
+          // Get or generate question
+          const userAnswers = await storage.getUserAnswers(user.id, 1000);
+          const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
+          const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+            ? user.categoryPreferences 
+            : ['general'];
+          const categoryIndex = user.questionsAnswered % userCategories.length;
+          const todayCategory = userCategories[categoryIndex];
+          
+          let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
+          
+          if (!question) {
+            const allQuestions = await storage.getAllQuestions();
+            const recentQuestions = allQuestions
+              .sort((a, b) => b.id - a.id)
+              .slice(0, 10)
+              .map(q => q.questionText);
+            
+            const generated = await geminiService.generateQuestion(todayCategory, 'medium', recentQuestions);
+            
+            if (generated) {
+              question = await storage.createQuestion(generated);
+            }
+          }
+          
+          if (!question) {
+            await storage.markDeliveryAsFailed(delivery.id, 'No question available');
+            errorCount++;
+            continue;
+          }
+          
+          // Format message
+          const questionNumber = user.questionsAnswered + 1;
+          const message = `🧠 Question #${questionNumber}: ${question.questionText}\n\n` +
+            `A) ${question.optionA}\n` +
+            `B) ${question.optionB}\n` +
+            `C) ${question.optionC}\n` +
+            `D) ${question.optionD}\n\n` +
+            `Reply with A, B, C, or D`;
+          
+          // Send SMS
+          const smsSuccess = await twilioService.sendSMS({
+            to: user.phoneNumber,
+            body: message
+          });
+          
+          if (smsSuccess) {
+            // Create pending answer record
+            await storage.recordAnswer({
+              userId: user.id,
+              questionId: question.id,
+              userAnswer: null,
+              isCorrect: false,
+              pointsEarned: 0
+            });
+            
+            // Update user's last quiz date
+            await storage.updateUser(user.id, { 
+              lastQuizDate: new Date() 
+            });
+            
+            // Mark delivery as sent
+            await storage.markDeliveryAsSent(delivery.id, question.id);
+            
+            console.log(`✅ Sent question to ${user.phoneNumber}`);
+            processedCount++;
+          } else {
+            await storage.markDeliveryAsFailed(delivery.id, 'SMS send failed');
+            errorCount++;
+          }
+        } catch (error) {
+          console.error(`Failed to process delivery ${delivery.id}:`, error);
+          await storage.markDeliveryAsFailed(
+            delivery.id, 
+            error instanceof Error ? error.message : 'Unknown error'
+          );
+          errorCount++;
+        }
+      }
+      
+      return { processedCount, errorCount };
+    };
+    
+    const result = await processDeliveryQueue();
+    
+    res.json({
+      message: 'Queue processing triggered manually',
+      status: {
+        before: {
+          total: todayStatus.length,
+          pending: pending.length,
+          sent: sent.length,
+          failed: failed.length
+        },
+        processed: result,
+        timestamp: new Date().toISOString()
+      }
+    });
+  } catch (error) {
+    console.error('Manual queue trigger error:', error);
+    res.status(500).json({ error: 'Failed to trigger queue processing' });
   }
 });
 

@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
-import { schedulerService } from "./services/scheduler";
+// import { schedulerService } from "./services/scheduler"; // OLD BROKEN SCHEDULER - DISABLED
+import { queueScheduler } from "./services/queue-scheduler"; // NEW QUEUE-BASED SCHEDULER
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
 import simpleTestRoutes from "./routes-test-simple";
@@ -68,8 +69,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize scheduler and queue processor
-  schedulerService.init();
+  // Initialize NEW queue-based scheduler (old one was disabled due to critical bugs)
+  queueScheduler.init();
   
   // Start queue processor for generation jobs
   const { queueProcessor } = await import("./services/queue-processor.js");

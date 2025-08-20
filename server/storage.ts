@@ -1,6 +1,6 @@
 import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, deliveryQueue, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery, type DeliveryQueue, type InsertDeliveryQueue } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lt, isNull, lte } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -475,6 +475,149 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(users, eq(broadcastDeliveries.userId, users.id))
       .where(eq(broadcastDeliveries.broadcastId, broadcastId))
       .orderBy(broadcastDeliveries.id);
+  }
+
+  // Delivery Queue Implementation
+  async populateDeliveryQueue(date: Date): Promise<number> {
+    console.log(`📅 Populating delivery queue for ${date.toISOString()}`);
+    
+    // Get all active users
+    const activeUsers = await db
+      .select()
+      .from(users)
+      .where(eq(users.isActive, true));
+    
+    let count = 0;
+    
+    for (const user of activeUsers) {
+      try {
+        // Parse preferred time (e.g., "21:00")
+        const [hours, minutes] = user.preferredTime.split(':').map(Number);
+        
+        // Create date in user's timezone
+        const userDate = new Date(date);
+        userDate.setHours(hours, minutes, 0, 0);
+        
+        // Convert to UTC using proper timezone handling
+        const formatter = new Intl.DateTimeFormat('en-US', {
+          timeZone: user.timezone,
+          year: 'numeric',
+          month: '2-digit',
+          day: '2-digit',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: false
+        });
+        
+        // Get the UTC equivalent
+        const utcTimestamp = new Date(
+          date.getFullYear(),
+          date.getMonth(),
+          date.getDate(),
+          hours,
+          minutes
+        );
+        
+        // Adjust for timezone offset
+        const userOffset = this.getTimezoneOffset(user.timezone, utcTimestamp);
+        utcTimestamp.setMinutes(utcTimestamp.getMinutes() - userOffset);
+        
+        // Check if entry already exists
+        const existing = await db
+          .select()
+          .from(deliveryQueue)
+          .where(and(
+            eq(deliveryQueue.userId, user.id),
+            gte(deliveryQueue.scheduledFor, new Date(date.toDateString())),
+            lt(deliveryQueue.scheduledFor, new Date(new Date(date).setDate(date.getDate() + 1)))
+          ));
+        
+        if (existing.length === 0) {
+          await db.insert(deliveryQueue).values({
+            userId: user.id,
+            scheduledFor: utcTimestamp,
+            status: 'pending',
+            attempts: 0
+          });
+          count++;
+          console.log(`✅ Scheduled ${user.phoneNumber} for ${utcTimestamp.toISOString()}`);
+        }
+      } catch (error) {
+        console.error(`Failed to schedule user ${user.id}:`, error);
+      }
+    }
+    
+    return count;
+  }
+  
+  private getTimezoneOffset(timezone: string, date: Date): number {
+    // Create two dates - one in UTC and one in the target timezone
+    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
+    const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
+    // Return difference in minutes
+    return (utcDate.getTime() - tzDate.getTime()) / 60000;
+  }
+
+  async getDeliveriesToSend(currentTime: Date): Promise<DeliveryQueue[]> {
+    // Get deliveries scheduled for now or earlier that haven't been sent
+    const windowEnd = new Date(currentTime);
+    windowEnd.setMinutes(windowEnd.getMinutes() + 5); // 5 minute window
+    
+    return await db
+      .select()
+      .from(deliveryQueue)
+      .where(and(
+        eq(deliveryQueue.status, 'pending'),
+        lte(deliveryQueue.scheduledFor, windowEnd),
+        lt(deliveryQueue.attempts, 3) // Max 3 attempts
+      ))
+      .orderBy(deliveryQueue.scheduledFor);
+  }
+
+  async markDeliveryAsSent(id: number, questionId: number): Promise<void> {
+    await db
+      .update(deliveryQueue)
+      .set({
+        status: 'sent',
+        sentAt: new Date(),
+        questionId: questionId
+      })
+      .where(eq(deliveryQueue.id, id));
+  }
+
+  async markDeliveryAsFailed(id: number, error: string): Promise<void> {
+    const [current] = await db
+      .select()
+      .from(deliveryQueue)
+      .where(eq(deliveryQueue.id, id));
+    
+    if (current) {
+      await db
+        .update(deliveryQueue)
+        .set({
+          status: current.attempts >= 2 ? 'failed' : 'pending',
+          attempts: current.attempts + 1,
+          errorMessage: error
+        })
+        .where(eq(deliveryQueue.id, id));
+    }
+  }
+
+  async getTodayDeliveryStatus(): Promise<DeliveryQueue[]> {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    return await db
+      .select()
+      .from(deliveryQueue)
+      .where(and(
+        gte(deliveryQueue.scheduledFor, today),
+        lt(deliveryQueue.scheduledFor, tomorrow)
+      ))
+      .orderBy(deliveryQueue.scheduledFor);
   }
 }
 
