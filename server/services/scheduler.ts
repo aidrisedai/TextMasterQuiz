@@ -7,11 +7,11 @@ export class SchedulerService {
   private jobs = new Map<string, cron.ScheduledTask>();
 
   init() {
-    // Run every 5 minutes to ensure deliveries actually happen
-    cron.schedule('*/5 * * * *', async () => {
-      console.log(`📅 Scheduler check at ${new Date().toISOString()}`);
-      await this.sendDailyQuestions();
-    });
+    // DISABLED - Scheduler needs proper fixing before re-enabling
+    // cron.schedule('*/5 * * * *', async () => {
+    //   console.log(`📅 Scheduler check at ${new Date().toISOString()}`);
+    //   await this.sendDailyQuestions();
+    // });
     
     // Daily cleanup of orphaned pending answers (2 AM UTC)
     cron.schedule('0 2 * * *', async () => {
