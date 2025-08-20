@@ -12,6 +12,12 @@ export class SchedulerService {
       await this.sendDailyQuestions();
     });
     
+    // Additional check every 30 minutes for debugging
+    cron.schedule('30 * * * *', async () => {
+      console.log('🔍 Half-hour check for missed deliveries...');
+      await this.sendDailyQuestions();
+    });
+    
     // Daily cleanup of orphaned pending answers (2 AM UTC)
     cron.schedule('0 2 * * *', async () => {
       try {
