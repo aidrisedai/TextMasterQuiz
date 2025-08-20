@@ -70,6 +70,18 @@ export const generationJobs = pgTable("generation_jobs", {
   completedAt: timestamp("completed_at"),
 });
 
+export const deliveryQueue = pgTable("delivery_queue", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  scheduledFor: timestamp("scheduled_for").notNull(),
+  status: text("status").notNull().default("pending"),
+  attempts: integer("attempts").notNull().default(0),
+  questionId: integer("question_id").references(() => questions.id),
+  sentAt: timestamp("sent_at"),
+  errorMessage: text("error_message"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
 export const broadcasts = pgTable("broadcasts", {
   id: serial("id").primaryKey(),
   message: text("message").notNull(),
@@ -172,6 +184,12 @@ export const insertBroadcastDeliverySchema = createInsertSchema(broadcastDeliver
   id: true,
 });
 
+export const insertDeliveryQueueSchema = createInsertSchema(deliveryQueue).omit({
+  id: true,
+  createdAt: true,
+  sentAt: true,
+});
+
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type User = typeof users.$inferSelect;
 export type InsertQuestion = z.infer<typeof insertQuestionSchema>;
@@ -186,3 +204,5 @@ export type InsertBroadcast = z.infer<typeof insertBroadcastSchema>;
 export type Broadcast = typeof broadcasts.$inferSelect;
 export type InsertBroadcastDelivery = z.infer<typeof insertBroadcastDeliverySchema>;
 export type BroadcastDelivery = typeof broadcastDeliveries.$inferSelect;
+export type InsertDeliveryQueue = z.infer<typeof insertDeliveryQueueSchema>;
+export type DeliveryQueue = typeof deliveryQueue.$inferSelect;

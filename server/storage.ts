@@ -1,4 +1,4 @@
-import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery } from "@shared/schema";
+import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, deliveryQueue, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery, type DeliveryQueue, type InsertDeliveryQueue } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
 
@@ -56,6 +56,13 @@ export interface IStorage {
   createBroadcastDelivery(delivery: InsertBroadcastDelivery): Promise<BroadcastDelivery>;
   updateBroadcastDelivery(id: number, updates: Partial<BroadcastDelivery>): Promise<BroadcastDelivery | undefined>;
   getBroadcastDeliveries(broadcastId: number): Promise<(BroadcastDelivery & { user: User })[]>;
+  
+  // Delivery Queue methods
+  populateDeliveryQueue(date: Date): Promise<number>;
+  getDeliveriesToSend(currentTime: Date): Promise<DeliveryQueue[]>;
+  markDeliveryAsSent(id: number, questionId: number): Promise<void>;
+  markDeliveryAsFailed(id: number, error: string): Promise<void>;
+  getTodayDeliveryStatus(): Promise<DeliveryQueue[]>;
 }
 
 export class DatabaseStorage implements IStorage {
