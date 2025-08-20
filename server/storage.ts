@@ -494,43 +494,33 @@ export class DatabaseStorage implements IStorage {
         // Parse preferred time (e.g., "21:00")
         const [hours, minutes] = user.preferredTime.split(':').map(Number);
         
-        // Create date in user's timezone
-        const userDate = new Date(date);
-        userDate.setHours(hours, minutes, 0, 0);
+        // Build the date-time string in ISO format
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const hour = String(hours).padStart(2, '0');
+        const minute = String(minutes).padStart(2, '0');
         
-        // Convert to UTC using proper timezone handling
-        const formatter = new Intl.DateTimeFormat('en-US', {
-          timeZone: user.timezone,
-          year: 'numeric',
-          month: '2-digit',
-          day: '2-digit',
-          hour: '2-digit',
-          minute: '2-digit',
-          second: '2-digit',
-          hour12: false
-        });
+        const localDateStr = `${year}-${month}-${day}T${hour}:${minute}:00`;
         
-        // Get the UTC equivalent
-        const utcTimestamp = new Date(
-          date.getFullYear(),
-          date.getMonth(),
-          date.getDate(),
-          hours,
-          minutes
-        );
+        // Use a reliable library-free approach for timezone conversion
+        // This creates a date string that JavaScript will interpret in the user's timezone
+        const utcTimestamp = this.localTimeToUTC(localDateStr, user.timezone);
         
-        // Adjust for timezone offset
-        const userOffset = this.getTimezoneOffset(user.timezone, utcTimestamp);
-        utcTimestamp.setMinutes(utcTimestamp.getMinutes() - userOffset);
+        // Check if entry already exists for this user and date range
+        const dayStart = new Date(date);
+        dayStart.setUTCHours(0, 0, 0, 0);
+        const dayEnd = new Date(date);
+        dayEnd.setUTCDate(dayEnd.getUTCDate() + 2); // Cover next day for late night deliveries
+        dayEnd.setUTCHours(0, 0, 0, 0);
         
-        // Check if entry already exists
         const existing = await db
           .select()
           .from(deliveryQueue)
           .where(and(
             eq(deliveryQueue.userId, user.id),
-            gte(deliveryQueue.scheduledFor, new Date(date.toDateString())),
-            lt(deliveryQueue.scheduledFor, new Date(new Date(date).setDate(date.getDate() + 1)))
+            gte(deliveryQueue.scheduledFor, dayStart),
+            lt(deliveryQueue.scheduledFor, dayEnd)
           ));
         
         if (existing.length === 0) {
@@ -541,7 +531,7 @@ export class DatabaseStorage implements IStorage {
             attempts: 0
           });
           count++;
-          console.log(`✅ Scheduled ${user.phoneNumber} for ${utcTimestamp.toISOString()}`);
+          console.log(`✅ Scheduled ${user.phoneNumber} for ${utcTimestamp.toISOString()} (${user.preferredTime} ${user.timezone})`);
         }
       } catch (error) {
         console.error(`Failed to schedule user ${user.id}:`, error);
@@ -551,12 +541,68 @@ export class DatabaseStorage implements IStorage {
     return count;
   }
   
-  private getTimezoneOffset(timezone: string, date: Date): number {
-    // Create two dates - one in UTC and one in the target timezone
-    const utcDate = new Date(date.toLocaleString('en-US', { timeZone: 'UTC' }));
-    const tzDate = new Date(date.toLocaleString('en-US', { timeZone: timezone }));
-    // Return difference in minutes
-    return (utcDate.getTime() - tzDate.getTime()) / 60000;
+  private localTimeToUTC(localDateStr: string, timezone: string): Date {
+    // Convert local time to UTC using a simpler approach
+    // The input localDateStr is like "2025-08-20T21:00:00"
+    
+    // Parse the date components
+    const [datePart, timePart] = localDateStr.split('T');
+    const [year, month, day] = datePart.split('-').map(Number);
+    const [hour, minute] = timePart.split(':').map(Number);
+    
+    // Create a base date at midnight UTC for the target day
+    const baseDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
+    
+    // Get the offset for this timezone on this date
+    // We need to check what the offset is for this specific date (handles DST)
+    const testDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+    
+    // Format the test date in the target timezone to see what local time it represents
+    const formatter = new Intl.DateTimeFormat('en-US', {
+      timeZone: timezone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: false
+    });
+    
+    // Binary search for the correct UTC time
+    // We know it's within 24 hours of our test date
+    let low = testDate.getTime() - 24 * 60 * 60 * 1000;
+    let high = testDate.getTime() + 24 * 60 * 60 * 1000;
+    
+    while (high - low > 60000) { // Search until we're within 1 minute
+      const mid = Math.floor((low + high) / 2);
+      const midDate = new Date(mid);
+      
+      const formatted = formatter.format(midDate);
+      // Parse formatted string "MM/DD/YYYY, HH:MM"
+      const [datePart, timePart] = formatted.split(', ');
+      const [formHour, formMinute] = timePart.split(':').map(Number);
+      
+      if (formHour < hour || (formHour === hour && formMinute < minute)) {
+        low = mid;
+      } else {
+        high = mid;
+      }
+    }
+    
+    // Return the found UTC time
+    const result = new Date(Math.floor((low + high) / 2));
+    
+    // Verify the result
+    const check = formatter.format(result);
+    const [checkDate, checkTime] = check.split(', ');
+    const [checkHour, checkMinute] = checkTime.split(':').map(Number);
+    
+    if (checkHour !== hour || checkMinute !== minute) {
+      console.warn(`Warning: Time conversion mismatch for ${localDateStr} ${timezone}`);
+      console.warn(`Wanted ${hour}:${minute}, got ${checkHour}:${checkMinute}`);
+    }
+    
+    return result;
   }
 
   async getDeliveriesToSend(currentTime: Date): Promise<DeliveryQueue[]> {
