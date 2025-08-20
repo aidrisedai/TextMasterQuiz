@@ -7,14 +7,9 @@ export class SchedulerService {
   private jobs = new Map<string, cron.ScheduledTask>();
 
   init() {
-    // Run every hour to check for users who need questions
-    cron.schedule('0 * * * *', async () => {
-      await this.sendDailyQuestions();
-    });
-    
-    // Additional check every 30 minutes for debugging
-    cron.schedule('30 * * * *', async () => {
-      console.log('🔍 Half-hour check for missed deliveries...');
+    // Run every 5 minutes to ensure deliveries actually happen
+    cron.schedule('*/5 * * * *', async () => {
+      console.log(`📅 Scheduler check at ${new Date().toISOString()}`);
       await this.sendDailyQuestions();
     });
     
@@ -118,10 +113,12 @@ export class SchedulerService {
   }
 
   private async userNeedsQuestionNow(user: any, currentHour: number, preferredHour: number, currentTime: Date): Promise<boolean> {
-    // Only send at the preferred hour - no more "catch up" logic
+    // Send at preferred hour OR if overdue (for reliability)
     const isPreferredHour = currentHour === preferredHour;
+    const isPastPreferredHour = currentHour > preferredHour;
+    const hasNotReceivedToday = !this.hasReceivedToday(user, currentTime);
     
-    if (!isPreferredHour) {
+    if (!isPreferredHour && !(isPastPreferredHour && hasNotReceivedToday)) {
       return false;
     }
     
