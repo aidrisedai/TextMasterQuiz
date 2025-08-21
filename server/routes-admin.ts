@@ -312,6 +312,107 @@ router.delete('/generation-queue/:id', async (req, res) => {
   }
 });
 
+// Phone validation endpoints
+router.post('/validate-phones', async (req, res) => {
+  try {
+    const { validatePhoneList } = await import('../shared/phone-validator.js');
+    
+    // Get all users
+    const users = await storage.getAllUsers();
+    const phoneNumbers = users.map(u => u.phoneNumber);
+    
+    // Validate all phone numbers
+    const validationResults = validatePhoneList(phoneNumbers);
+    
+    // Categorize results
+    const valid: string[] = [];
+    const invalid: { phone: string; error: string }[] = [];
+    const testNumbers: string[] = [];
+    
+    validationResults.forEach((result, phone) => {
+      if (result.isValid) {
+        if (phone.includes('555') || /(\d)\1{6,}/.test(phone)) {
+          testNumbers.push(phone);
+        } else {
+          valid.push(phone);
+        }
+      } else {
+        invalid.push({ phone, error: result.error || 'Unknown error' });
+      }
+    });
+    
+    res.json({
+      summary: {
+        total: phoneNumbers.length,
+        valid: valid.length,
+        invalid: invalid.length,
+        testNumbers: testNumbers.length
+      },
+      invalid,
+      testNumbers,
+      recommendation: invalid.length > 0 ? 
+        'Some users have invalid phone numbers that will fail SMS delivery. Consider deactivating them.' : 
+        'All phone numbers are properly formatted!'
+    });
+  } catch (error) {
+    console.error('Phone validation error:', error);
+    res.status(500).json({ error: 'Failed to validate phone numbers' });
+  }
+});
+
+// Fix invalid phone numbers
+router.post('/fix-phones', async (req, res) => {
+  try {
+    const { validateAndFormatUSAPhone } = await import('../shared/phone-validator.js');
+    const { phoneNumbers } = req.body;
+    
+    if (!Array.isArray(phoneNumbers)) {
+      return res.status(400).json({ error: 'phoneNumbers must be an array' });
+    }
+    
+    const results: any[] = [];
+    
+    for (const phone of phoneNumbers) {
+      const user = await storage.getUserByPhoneNumber(phone);
+      if (!user) {
+        results.push({ phone, status: 'not_found' });
+        continue;
+      }
+      
+      const validation = validateAndFormatUSAPhone(phone);
+      
+      if (validation.isValid && validation.formatted !== phone) {
+        // Update user with corrected phone number
+        await storage.updateUser(user.id, {
+          phoneNumber: validation.formatted
+        });
+        results.push({ 
+          phone, 
+          status: 'fixed', 
+          newPhone: validation.formatted 
+        });
+      } else if (!validation.isValid) {
+        // Deactivate users with unfixable numbers
+        await storage.updateUser(user.id, {
+          isActive: false
+        });
+        results.push({ 
+          phone, 
+          status: 'deactivated', 
+          reason: validation.error 
+        });
+      } else {
+        results.push({ phone, status: 'already_valid' });
+      }
+    }
+    
+    res.json({ results });
+  } catch (error) {
+    console.error('Phone fix error:', error);
+    res.status(500).json({ error: 'Failed to fix phone numbers' });
+  }
+});
+
 // Broadcast management endpoints
 const broadcastMessageSchema = z.object({
   message: z.string().min(1, 'Message is required').max(1500, 'Message too long'),

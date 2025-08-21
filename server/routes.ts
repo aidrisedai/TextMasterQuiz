@@ -85,17 +85,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const data = signupSchema.parse(req.body);
       
+      // Import validation function
+      const { validateAndFormatUSAPhone, isTestPhoneNumber } = await import("../shared/phone-validator.js");
+      
+      // Validate and format the phone number
+      const phoneValidation = validateAndFormatUSAPhone(data.phoneNumber);
+      
+      if (!phoneValidation.isValid) {
+        return res.status(400).json({ 
+          message: `Invalid phone number: ${phoneValidation.error}`,
+          details: phoneValidation
+        });
+      }
+      
+      // Warn if it looks like a test number
+      if (isTestPhoneNumber(phoneValidation.formatted!)) {
+        console.warn(`Warning: Test/fake phone number detected: ${phoneValidation.formatted}`);
+        // You could reject these outright if you want:
+        // return res.status(400).json({ 
+        //   message: "This appears to be a test phone number. Please use a real phone number." 
+        // });
+      }
+      
+      // Use the properly formatted phone number
+      const formattedPhone = phoneValidation.formatted!;
+      
       // Check if user already exists
-      const existingUser = await storage.getUserByPhoneNumber(data.phoneNumber);
+      const existingUser = await storage.getUserByPhoneNumber(formattedPhone);
       if (existingUser) {
         return res.status(400).json({ 
           message: "A user with this phone number already exists" 
         });
       }
 
-      // Create user
+      // Create user with validated phone number
       const user = await storage.createUser({
-        phoneNumber: data.phoneNumber,
+        phoneNumber: formattedPhone,
         categoryPreferences: data.categoryPreferences || [],
         preferredTime: data.preferredTime,
         timezone: data.timezone,
