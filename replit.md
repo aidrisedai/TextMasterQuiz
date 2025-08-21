@@ -6,6 +6,11 @@ Text4Quiz is a full-stack SMS-based trivia application that delivers daily trivi
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Updates (August 21, 2025)
+- **Phone Validation System**: Implemented comprehensive USA phone number validation both frontend and backend. Auto-formats input, validates against NANP rules, rejects test numbers (555 prefix), and provides real-time feedback.
+- **Frontend Validation**: Enhanced PhoneInput component with real-time validation showing green checkmarks for valid numbers, red X for invalid, and yellow warning for test numbers.
+- **Backend Protection**: All signups now validate phone numbers server-side, auto-correcting formatting and rejecting invalid area codes.
+
 ## System Architecture
 The application follows a modern full-stack architecture with:
 

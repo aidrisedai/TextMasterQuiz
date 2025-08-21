@@ -32,9 +32,18 @@ import { useToast } from "../hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { api } from "../lib/api";
 import { Rocket, Loader2, Globe } from "lucide-react";
+import { validateAndFormatUSAPhone } from "../lib/phone-validator";
 
 const signupSchema = z.object({
-  phoneNumber: z.string().min(1, "Phone number is required"),
+  phoneNumber: z.string()
+    .min(1, "Phone number is required")
+    .refine((phone) => {
+      const validation = validateAndFormatUSAPhone(phone);
+      return validation.isValid;
+    }, (phone) => {
+      const validation = validateAndFormatUSAPhone(phone);
+      return { message: validation.error || "Invalid phone number" };
+    }),
   preferredTime: z.string().min(1, "Please select a preferred time"),
   timezone: z.string().min(1, "Please select your timezone"),
   categoryPreferences: z
@@ -120,15 +129,20 @@ export function SignupForm() {
   });
 
   const onSubmit = (data: SignupFormData) => {
-    // Clean phone number for submission
-    const cleanPhone = data.phoneNumber.replace(/\D/g, "");
-    if (cleanPhone.length === 10) {
-      data.phoneNumber = `+1${cleanPhone}`;
-    } else if (cleanPhone.length === 11 && cleanPhone[0] === "1") {
-      data.phoneNumber = `+${cleanPhone}`;
+    // Use the validator to format the phone number properly
+    const validation = validateAndFormatUSAPhone(data.phoneNumber);
+    
+    if (validation.isValid && validation.formatted) {
+      data.phoneNumber = validation.formatted;
+      signupMutation.mutate(data);
+    } else {
+      // This shouldn't happen due to schema validation, but just in case
+      toast({
+        title: "Invalid Phone Number",
+        description: validation.error || "Please enter a valid USA phone number",
+        variant: "destructive",
+      });
     }
-
-    signupMutation.mutate(data);
   };
 
   if (isSuccess) {
