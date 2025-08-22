@@ -6,7 +6,12 @@ Text4Quiz is a full-stack SMS-based trivia application that delivers daily trivi
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Updates (August 21, 2025)
+## Recent Updates (August 22, 2025)
+- **Critical Bug Fix - Timezone Handling**: Fixed `getTodayDeliveryStatus()` function that was using local time instead of UTC, causing midnight queue population failures. Changed `setHours()` to `setUTCHours()` to properly handle UTC times.
+- **Documentation**: Created comprehensive PLATFORM_WALKTHROUGH.md for engineer onboarding, covering entire system architecture, troubleshooting guides, and known issues.
+- **Manual Queue Recovery**: Populated missing August 22 deliveries for 31 users after discovering midnight job failure.
+
+## Previous Updates (August 21, 2025)
 - **Phone Validation System**: Implemented comprehensive USA phone number validation both frontend and backend. Auto-formats input, validates against NANP rules, rejects test numbers (555 prefix), and provides real-time feedback.
 - **Frontend Validation**: Enhanced PhoneInput component with real-time validation showing green checkmarks for valid numbers, red X for invalid, and yellow warning for test numbers.
 - **Backend Protection**: All signups now validate phone numbers server-side, auto-correcting formatting and rejecting invalid area codes.
