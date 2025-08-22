@@ -98,6 +98,15 @@ interface BroadcastPreview {
   messagePreview: string;
 }
 
+interface GenerationState {
+  isGenerating: boolean;
+  currentCategory: string | null;
+  startedAt: string | null;
+  completedCategories: string[];
+  shouldCancel: boolean;
+  error: string | null;
+}
+
 const queueGenerationSchema = z.object({
   category: z.string().min(1, 'Category is required'),
   questionCount: z.number().min(1).max(100, 'Maximum 100 questions per job'),
@@ -139,6 +148,8 @@ export default function AdminPage() {
   const [isBroadcastLoading, setIsBroadcastLoading] = useState(false);
   const [isTestMode, setIsTestMode] = useState(false);
   const [isSimulating, setIsSimulating] = useState(false);
+  const [generationState, setGenerationState] = useState<GenerationState | null>(null);
+  const [isCheckingGeneration, setIsCheckingGeneration] = useState(false);
   const { toast } = useToast();
   
   const loginForm = useForm<z.infer<typeof loginSchema>>({
@@ -637,6 +648,52 @@ export default function AdminPage() {
     }
   };
 
+  const checkGenerationStatus = async () => {
+    try {
+      setIsCheckingGeneration(true);
+      const response = await fetch('/api/admin/generation-status');
+      const data = await response.json();
+      
+      if (response.ok) {
+        setGenerationState(data);
+      }
+    } catch (error) {
+      console.error('Error checking generation status:', error);
+    } finally {
+      setIsCheckingGeneration(false);
+    }
+  };
+
+  const cancelGeneration = async () => {
+    try {
+      const response = await fetch('/api/admin/cancel-generation', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      if (response.ok) {
+        toast({
+          title: "Cancellation Requested",
+          description: "Question generation will stop after the current question completes",
+        });
+        checkGenerationStatus();
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to cancel generation",
+          variant: "destructive"
+        });
+      }
+    } catch (error) {
+      console.error('Error cancelling generation:', error);
+      toast({
+        title: "Error",
+        description: "Failed to cancel generation",
+        variant: "destructive"
+      });
+    }
+  };
+
   useEffect(() => {
     const initializeAuth = async () => {
       const authenticated = await checkAuthStatus();
@@ -658,6 +715,9 @@ export default function AdminPage() {
       if (activeTab === 'broadcast') {
         fetchBroadcasts();
       }
+      if (activeTab === 'generation') {
+        checkGenerationStatus();
+      }
     }
   }, [selectedCategory, authStatus.authenticated, activeTab]);
 
@@ -676,10 +736,13 @@ export default function AdminPage() {
     
     const interval = setInterval(() => {
       fetchGenerationQueue();
+      if (activeTab === 'generation') {
+        checkGenerationStatus();
+      }
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [authStatus.authenticated]);
+  }, [authStatus.authenticated, activeTab]);
 
   const categories = ['all', ...Object.keys(stats.categories)];
 
@@ -1129,6 +1192,42 @@ export default function AdminPage() {
         </TabsContent>
         
         <TabsContent value="generation" className="space-y-4">
+          {/* Generation Status Card */}
+          {generationState && generationState.isGenerating && (
+            <Card className="border-blue-200 bg-blue-50 dark:bg-blue-950">
+              <CardHeader>
+                <div className="flex justify-between items-start">
+                  <div>
+                    <CardTitle className="text-blue-800 dark:text-blue-200">🔄 Generation in Progress</CardTitle>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Currently generating questions for: <strong>{generationState.currentCategory}</strong>
+                    </p>
+                  </div>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={cancelGeneration}
+                  >
+                    Cancel Generation
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  <div className="text-sm text-gray-600 dark:text-gray-400">
+                    <div>Started: {generationState.startedAt ? new Date(generationState.startedAt).toLocaleString() : 'Unknown'}</div>
+                    <div>Completed categories: {generationState.completedCategories.join(', ') || 'None yet'}</div>
+                  </div>
+                  {generationState.error && (
+                    <div className="text-sm text-red-600 bg-red-50 dark:bg-red-950 p-2 rounded">
+                      Error: {generationState.error}
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          )}
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Add to Queue Form */}
             <Card>

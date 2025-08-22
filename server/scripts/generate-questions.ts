@@ -90,9 +90,10 @@ async function generateAllQuestions(): Promise<void> {
   }
 }
 
-// Run if called directly
-if (import.meta.url === `file://${process.argv[1]}`) {
-  generateAllQuestions().catch(console.error);
-}
+// DISABLED: Auto-run was causing continuous generation
+// Run if called directly (uncomment only when needed)
+// if (import.meta.url === `file://${process.argv[1]}`) {
+//   generateAllQuestions().catch(console.error);
+// }
 
 export { generateAllQuestions, generateQuestionsForCategory };

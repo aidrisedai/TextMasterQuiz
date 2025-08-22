@@ -2,28 +2,52 @@
 import { Router } from 'express';
 import { twilioService } from './services/twilio.js';
 import { storage } from './storage.js';
-import { generateAllQuestions, generateQuestionsForCategory } from './scripts/generate-questions.js';
+import { generateQuestionsForCategory } from './scripts/generate-questions.js';
 import { geminiService } from './services/gemini.js';
 import { broadcastService } from './services/broadcast.js';
 import { queueScheduler } from './services/queue-scheduler.js';
 import { insertGenerationJobSchema, insertBroadcastSchema } from '@shared/schema';
 import { z } from 'zod';
+import { generationManager } from './services/generation-manager.js';
 
 const router = Router();
 
 // Note: Admin authentication middleware is applied at the app level in routes.ts
 
+// Get generation status
+router.get('/generation-status', async (req, res) => {
+  const state = generationManager.getState();
+  res.json(state);
+});
+
+// Cancel generation
+router.post('/cancel-generation', async (req, res) => {
+  generationManager.cancelGeneration();
+  res.json({ message: 'Generation cancellation requested' });
+});
+
 // Generate questions for all categories
 router.post('/generate-questions', async (req, res) => {
   try {
-    console.log('Starting bulk question generation...');
+    // Check if generation is already in progress
+    if (generationManager.isGenerating()) {
+      return res.status(409).json({ 
+        error: 'Generation already in progress',
+        state: generationManager.getState()
+      });
+    }
     
-    // Run generation in background
-    generateAllQuestions().catch(console.error);
+    console.log('Starting controlled bulk question generation...');
+    
+    // Run generation in background with manager
+    generationManager.generateAllQuestions().catch(error => {
+      console.error('Background generation error:', error);
+    });
     
     res.json({ 
       message: 'Question generation started',
-      note: 'Check server logs for progress. This will take several minutes.'
+      note: 'Check /api/admin/generation-status for progress. This will take several minutes.',
+      state: generationManager.getState()
     });
   } catch (error) {
     console.error('Question generation error:', error);
@@ -37,14 +61,25 @@ router.post('/generate-questions/:category', async (req, res) => {
     const { category } = req.params;
     const { count = 20 } = req.body;
     
+    // Check if generation is already in progress
+    if (generationManager.isGenerating()) {
+      return res.status(409).json({ 
+        error: 'Generation already in progress',
+        state: generationManager.getState()
+      });
+    }
+    
     console.log(`Generating ${count} questions for category: ${category}`);
     
-    // Run generation in background
-    generateQuestionsForCategory(category, count).catch(console.error);
+    // Run generation in background with manager
+    generationManager.generateForCategory(category, count).catch(error => {
+      console.error('Background category generation error:', error);
+    });
     
     res.json({ 
       message: `Generating ${count} questions for ${category}`,
-      note: 'Check server logs for progress'
+      note: 'Check /api/admin/generation-status for progress',
+      state: generationManager.getState()
     });
   } catch (error) {
     console.error('Category question generation error:', error);
