@@ -73,9 +73,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
   queueScheduler.init();
   
   // Start queue processor for generation jobs
-  const { queueProcessor } = await import("./services/queue-processor.js");
-  queueProcessor.start();
-  console.log('Queue processor initialized');
+  // DISABLED: Queue processor was continuously generating questions from stuck jobs
+  // Uncomment only when you need to run generation or broadcast jobs
+  // const { queueProcessor } = await import("./services/queue-processor.js");
+  // queueProcessor.start();
+  // console.log('Queue processor initialized');
   
   // Ensure default admin user exists
   await ensureDefaultAdmin();
