@@ -1068,7 +1068,13 @@ export default function AdminPage() {
                         user.phoneNumber.toLowerCase().includes(userFilter.toLowerCase())
                       )
                       .sort((a, b) => {
-                        let aVal, bVal;
+                        if (sortBy === 'categories') {
+                          const aVal = a.categories.length;
+                          const bVal = b.categories.length;
+                          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
+                        }
+                        
+                        let aVal: string, bVal: string;
                         switch (sortBy) {
                           case 'name':
                             aVal = a.phoneNumber;
@@ -1078,17 +1084,9 @@ export default function AdminPage() {
                             aVal = a.lastMessageDate || '';
                             bVal = b.lastMessageDate || '';
                             break;
-                          case 'categories':
-                            aVal = a.categories.length;
-                            bVal = b.categories.length;
-                            break;
                           default:
                             aVal = a.phoneNumber;
                             bVal = b.phoneNumber;
-                        }
-                        
-                        if (sortBy === 'categories') {
-                          return sortOrder === 'asc' ? aVal - bVal : bVal - aVal;
                         }
                         
                         const comparison = aVal.localeCompare(bVal);

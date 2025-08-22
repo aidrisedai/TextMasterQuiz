@@ -116,7 +116,7 @@ router.post('/generate-single/:category', async (req, res) => {
         explanation: question.explanation,
         category: question.category,
         difficultyLevel: question.difficultyLevel,
-        timesUsed: 0
+        usageCount: 0
       });
       
       res.json({ 
