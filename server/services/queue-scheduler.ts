@@ -155,17 +155,13 @@ export class QueueSchedulerService {
       let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
       
       if (!question) {
-        // Generate new question with AI
-        const allQuestions = await storage.getAllQuestions();
-        const recentQuestions = allQuestions
-          .sort((a, b) => b.id - a.id)
-          .slice(0, 10)
-          .map(q => q.questionText);
-        
-        const generated = await geminiService.generateQuestion(todayCategory, 'medium', recentQuestions);
-        
-        if (generated) {
-          question = await storage.createQuestion(generated);
+        // DISABLED: Automatic generation to prevent runaway question creation
+        console.log(`⚠️ No unused questions found for category ${todayCategory}, skipping delivery to prevent runaway generation`);
+        // Use existing questions from any category as fallback
+        question = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
+        if (!question) {
+          // Last resort: use any question from database
+          question = await storage.getRandomQuestion([], []);
         }
       }
       
