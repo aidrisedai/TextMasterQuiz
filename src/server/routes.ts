@@ -68,13 +68,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
+  // DISABLED: Old scheduler was causing runaway question generation
   // Initialize scheduler and queue processor
-  schedulerService.init();
+  // schedulerService.init();
   
+  // DISABLED: Queue processor was causing runaway question generation
   // Start queue processor for generation jobs
-  const { queueProcessor } = await import("./services/queue-processor.js");
-  queueProcessor.start();
-  console.log('Queue processor initialized');
+  // const { queueProcessor } = await import("./services/queue-processor.js");
+  // queueProcessor.start();
+  // console.log('Queue processor initialized');
   
   // Ensure default admin user exists
   await ensureDefaultAdmin();
