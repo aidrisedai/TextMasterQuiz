@@ -155,23 +155,13 @@ export class QueueSchedulerService {
       let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
       
       if (!question) {
-        // Try fallback to any of user's categories first
+        // EMERGENCY STOP: Disable generation until query optimization is fixed
+        console.log(`⚠️ No unused questions found for category ${todayCategory}, using fallback instead of generating`);
+        // Use existing questions from any category as fallback
         question = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
-        
         if (!question) {
-          // Generate new question only if truly no questions available
-          console.log(`🤖 No unused questions found for user categories, generating new ${todayCategory} question...`);
-          const allQuestions = await storage.getAllQuestions();
-          const recentQuestions = allQuestions
-            .sort((a, b) => b.id - a.id)
-            .slice(0, 10)
-            .map(q => q.questionText);
-          
-          const generated = await geminiService.generateQuestion(todayCategory, 'medium', recentQuestions);
-          
-          if (generated) {
-            question = await storage.createQuestion(generated);
-          }
+          // Last resort: use any question from database 
+          question = await storage.getRandomQuestion([], []);
         }
       }
       

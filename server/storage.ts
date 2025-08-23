@@ -98,10 +98,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined> {
-    // OPTIMIZED: Query database directly instead of loading all questions into memory
-    let query = db.select().from(questions);
-    
-    // Build WHERE conditions
+    // FIXED: Simpler approach - build conditions array and apply in one query
     const conditions = [];
     
     // Filter by categories if provided
@@ -114,15 +111,17 @@ export class DatabaseStorage implements IStorage {
       conditions.push(notInArray(questions.id, excludeIds));
     }
     
-    // Apply WHERE conditions if any
-    if (conditions.length > 0) {
-      query = query.where(and(...conditions));
-    }
-    
-    // Order by usage count (ascending) to prefer less-used questions, then limit
-    const candidateQuestions = await query
-      .orderBy(questions.usageCount, sql`RANDOM()`)
-      .limit(10);
+    // Build the complete query with all conditions
+    const candidateQuestions = conditions.length > 0 
+      ? await db.select()
+          .from(questions)
+          .where(and(...conditions))
+          .orderBy(questions.usageCount, sql`RANDOM()`)
+          .limit(10)
+      : await db.select()
+          .from(questions)
+          .orderBy(questions.usageCount, sql`RANDOM()`)
+          .limit(10);
     
     if (candidateQuestions.length === 0) return undefined;
     
