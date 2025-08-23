@@ -1,6 +1,6 @@
 import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, deliveryQueue, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery, type DeliveryQueue, type InsertDeliveryQueue } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lt, isNull, lte } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lt, isNull, lte, inArray, notInArray } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -98,35 +98,37 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined> {
-    // Get all questions first, then filter in memory for now
-    const allQuestions = await db.select().from(questions);
+    // OPTIMIZED: Query database directly instead of loading all questions into memory
+    let query = db.select().from(questions);
     
-    let filteredQuestions = allQuestions;
+    // Build WHERE conditions
+    const conditions = [];
     
     // Filter by categories if provided
     if (categories && categories.length > 0) {
-      filteredQuestions = filteredQuestions.filter(q => 
-        categories.includes(q.category)
-      );
+      conditions.push(inArray(questions.category, categories));
     }
     
     // Exclude questions the user has already answered
     if (excludeIds && excludeIds.length > 0) {
-      filteredQuestions = filteredQuestions.filter(q => 
-        !excludeIds.includes(q.id)
-      );
+      conditions.push(notInArray(questions.id, excludeIds));
     }
     
-    if (filteredQuestions.length === 0) return undefined;
+    // Apply WHERE conditions if any
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions));
+    }
     
-    // Sort by usage count (ascending) to prefer less-used questions
-    filteredQuestions.sort((a, b) => a.usageCount - b.usageCount);
+    // Order by usage count (ascending) to prefer less-used questions, then limit
+    const candidateQuestions = await query
+      .orderBy(questions.usageCount, sql`RANDOM()`)
+      .limit(10);
     
-    // Take the 10 least used questions and pick randomly from them
-    const leastUsed = filteredQuestions.slice(0, Math.min(10, filteredQuestions.length));
-    const randomIndex = Math.floor(Math.random() * leastUsed.length);
+    if (candidateQuestions.length === 0) return undefined;
     
-    return leastUsed[randomIndex];
+    // Pick randomly from the limited result set
+    const randomIndex = Math.floor(Math.random() * candidateQuestions.length);
+    return candidateQuestions[randomIndex];
   }
 
   async getAllQuestions(): Promise<Question[]> {
