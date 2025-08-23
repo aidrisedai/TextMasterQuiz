@@ -196,22 +196,15 @@ export class SchedulerService {
       let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
       
       if (!question) {
-        console.log('🤖 No unused questions found, generating new question with AI...');
-        
-        // Get recent questions to avoid duplicates (limited to prevent token overflow)
-        const allQuestions = await storage.getAllQuestions();
-        const recentQuestions = allQuestions
-          .sort((a, b) => b.id - a.id)
-          .slice(0, 10)
-          .map(q => q.questionText);
-        
-        // Generate a new question using AI with duplicate prevention for TODAY'S category only
-        const generated = await geminiService.generateQuestion(todayCategory, 'medium', recentQuestions);
-        
-        if (generated) {
-          question = await storage.createQuestion(generated);
-          console.log(`✨ Generated new ${todayCategory} question: ${question.questionText.substring(0, 50)}...`);
+        // EMERGENCY STOP: Disable generation in old scheduler too
+        console.log(`⚠️ No unused questions found for category ${todayCategory}, using fallback instead of generating`);
+        // Use existing questions from any category as fallback
+        question = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
+        if (!question) {
+          // Last resort: use any question from database
+          question = await storage.getRandomQuestion([], []);
         }
+        // Skip the generation block entirely
       } else {
         console.log(`📚 Using existing ${todayCategory} question: ${question.questionText.substring(0, 50)}...`);
       }
