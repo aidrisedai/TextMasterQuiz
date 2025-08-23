@@ -511,7 +511,7 @@ export class DatabaseStorage implements IStorage {
         const dayStart = new Date(date);
         dayStart.setUTCHours(0, 0, 0, 0);
         const dayEnd = new Date(date);
-        dayEnd.setUTCDate(dayEnd.getUTCDate() + 2); // Cover next day for late night deliveries
+        dayEnd.setUTCDate(dayEnd.getUTCDate() + 1); // Cover next day for late night deliveries
         dayEnd.setUTCHours(0, 0, 0, 0);
         
         const existing = await db
