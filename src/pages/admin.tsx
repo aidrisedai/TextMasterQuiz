@@ -845,6 +845,7 @@ export default function AdminPage() {
           <TabsTrigger value="generation" className="flex-1">Generation</TabsTrigger>
           <TabsTrigger value="broadcast" className="flex-1">Broadcast</TabsTrigger>
           <TabsTrigger value="categories" className="flex-1">Categories</TabsTrigger>
+          <TabsTrigger value="monitoring" className="flex-1">Monitoring</TabsTrigger>
         </TabsList>
         
         <TabsContent value="questions" className="space-y-4">
@@ -1653,7 +1654,234 @@ export default function AdminPage() {
             </CardContent>
           </Card>
         </TabsContent>
+
+        {/* Monitoring Tab */}
+        <TabsContent value="monitoring" className="space-y-4">
+          <AdminMonitoring />
+        </TabsContent>
+
       </Tabs>
+    </div>
+  );
+}
+
+// Inline monitoring component for admin dashboard
+function AdminMonitoring() {
+  const [health, setHealth] = React.useState<any>(null);
+  const [metrics, setMetrics] = React.useState<any>(null);
+  const [loading, setLoading] = React.useState(true);
+  const { toast } = useToast();
+
+  const fetchData = async () => {
+    try {
+      setLoading(true);
+      const [healthRes, metricsRes] = await Promise.all([
+        fetch('/admin/monitoring/health'),
+        fetch('/admin/monitoring/daily')
+      ]);
+      
+      if (healthRes.ok) setHealth(await healthRes.json());
+      if (metricsRes.ok) setMetrics(await metricsRes.json());
+    } catch (error) {
+      toast({ title: "Error", description: "Failed to load monitoring data", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const runSyntheticTest = async () => {
+    try {
+      const response = await fetch('/admin/monitoring/synthetic-test', { method: 'POST' });
+      const result = await response.json();
+      toast({ 
+        title: result.success ? "Test Passed" : "Test Failed", 
+        description: result.message,
+        variant: result.success ? "default" : "destructive"
+      });
+      fetchData();
+    } catch (error) {
+      toast({ title: "Error", description: "Test failed to run", variant: "destructive" });
+    }
+  };
+
+  React.useEffect(() => {
+    fetchData();
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-8">
+        <RefreshCw className="h-6 w-6 animate-spin mr-2" />
+        <span>Loading monitoring data...</span>
+      </div>
+    );
+  }
+
+  const getHealthColor = (status: string) => {
+    switch (status) {
+      case 'healthy': return 'bg-green-100 text-green-800';
+      case 'degraded': return 'bg-yellow-100 text-yellow-800';
+      case 'down': return 'bg-red-100 text-red-800';
+      default: return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="flex gap-2">
+        <Button onClick={fetchData} variant="outline" size="sm">
+          <RefreshCw className="h-4 w-4 mr-1" />
+          Refresh
+        </Button>
+        <Button onClick={runSyntheticTest} variant="outline" size="sm">
+          <Send className="h-4 w-4 mr-1" />
+          Test SMS
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Overall Health</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <Badge className={health ? getHealthColor(health.overallHealth) : 'bg-gray-100'}>
+              {health?.overallHealth?.toUpperCase() || 'Unknown'}
+            </Badge>
+            {health?.issues?.length > 0 && (
+              <p className="text-xs text-red-600 mt-2">
+                {health.issues.join(', ')}
+              </p>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">SMS Service</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-sm ${health?.smsService ? 'text-green-600' : 'text-red-600'}`}>
+              {health?.smsService ? '✅ Operational' : '❌ Issues'}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Database</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-sm ${health?.database ? 'text-green-600' : 'text-red-600'}`}>
+              {health?.database ? '✅ Connected' : '❌ Issues'}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Scheduler</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-sm ${health?.scheduler ? 'text-green-600' : 'text-red-600'}`}>
+              {health?.scheduler ? '✅ Running' : '❌ Issues'}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <User className="h-4 w-4" />
+              Active Users
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.totalUsers || 0}</div>
+            <p className="text-xs text-gray-600">Receiving daily questions</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              <MessageSquare className="h-4 w-4" />
+              Scheduled Today
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{metrics?.scheduledDeliveries || 0}</div>
+            <p className="text-xs text-gray-600">Messages queued</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Successful</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold text-green-600">{metrics?.successfulDeliveries || 0}</div>
+            <p className="text-xs text-gray-600">Delivered successfully</p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm">Delivery Rate</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className={`text-2xl font-bold ${
+              (metrics?.deliveryRate || 0) >= 95 ? 'text-green-600' : 
+              (metrics?.deliveryRate || 0) >= 80 ? 'text-yellow-600' : 'text-red-600'
+            }`}>
+              {Math.round(metrics?.deliveryRate || 0)}%
+            </div>
+            <p className="text-xs text-gray-600">Success rate</p>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Database className="h-5 w-5" />
+            System Status & Performance
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h4 className="font-medium mb-2">Health Details</h4>
+              {health?.issues?.length > 0 ? (
+                <ul className="space-y-1">
+                  {health.issues.map((issue: string, idx: number) => (
+                    <li key={idx} className="text-sm text-red-600">• {issue}</li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-sm text-green-600">✅ All systems operational</p>
+              )}
+            </div>
+            
+            <div>
+              <h4 className="font-medium mb-2">Today's Performance</h4>
+              <div className="space-y-1 text-sm">
+                <div>Date: {metrics?.date}</div>
+                <div>Failed Deliveries: <span className={metrics?.failedDeliveries > 0 ? 'text-red-600' : 'text-green-600'}>{metrics?.failedDeliveries || 0}</span></div>
+                <div>System Health: <Badge className={metrics ? getHealthColor(metrics.systemHealth) : ''}>{metrics?.systemHealth?.toUpperCase()}</Badge></div>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <div className="text-center text-xs text-gray-500">
+        Monitoring dashboard • Auto-refreshes every 30 seconds • Last updated: {new Date().toLocaleTimeString()}
+      </div>
     </div>
   );
 }
