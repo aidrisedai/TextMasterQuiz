@@ -32,47 +32,46 @@ export class MonitoringService {
     const dateStr = targetDate.toISOString().split('T')[0];
 
     try {
-      // Get delivery metrics for the day
-      const metrics = await (storage as any).db.raw(`
-        SELECT 
-          COUNT(DISTINCT u.id) as total_users,
-          COUNT(dq.id) as scheduled_deliveries,
-          COUNT(CASE WHEN dq.status = 'sent' THEN 1 END) as successful_deliveries,
-          COUNT(CASE WHEN dq.status = 'failed' THEN 1 END) as failed_deliveries,
-          ROUND(
-            COUNT(CASE WHEN dq.status = 'sent' THEN 1 END) * 100.0 / 
-            NULLIF(COUNT(dq.id), 0), 2
-          ) as delivery_rate
-        FROM users u
-        LEFT JOIN delivery_queue dq ON u.id = dq.user_id 
-          AND DATE(dq.scheduled_for) = ?
-        WHERE u.is_active = true
-      `, [dateStr]);
+      // Get all users (active count)
+      const allUsers = await storage.getAllUsers();
+      const totalUsers = allUsers.filter(u => u.isActive).length;
+
+      // Get today's delivery status for metrics
+      const deliveries = await storage.getTodayDeliveryStatus();
+      const todayDeliveries = deliveries.filter(d => {
+        const deliveryDate = new Date(d.scheduledFor).toISOString().split('T')[0];
+        return deliveryDate === dateStr;
+      });
+
+      const scheduledDeliveries = todayDeliveries.length;
+      const successfulDeliveries = todayDeliveries.filter(d => d.status === 'sent').length;
+      const failedDeliveries = todayDeliveries.filter(d => d.status === 'failed').length;
+      const deliveryRate = scheduledDeliveries > 0 ? (successfulDeliveries / scheduledDeliveries) * 100 : 0;
 
       // Get failure reasons
-      const failures = await (storage as any).db.raw(`
-        SELECT error_message, COUNT(*) as count
-        FROM delivery_queue 
-        WHERE DATE(scheduled_for) = ? 
-        AND status = 'failed'
-        AND error_message IS NOT NULL
-        GROUP BY error_message
-        ORDER BY count DESC
-        LIMIT 3
-      `, [dateStr]);
-
-      const data = metrics[0] || {};
+      const failures = todayDeliveries
+        .filter(d => d.status === 'failed' && d.errorMessage)
+        .reduce((acc: Record<string, number>, d) => {
+          const msg = d.errorMessage || 'Unknown';
+          acc[msg] = (acc[msg] || 0) + 1;
+          return acc;
+        }, {});
       
+      const topFailureReasons = Object.entries(failures)
+        .sort(([,a], [,b]) => b - a)
+        .slice(0, 3)
+        .map(([msg]) => msg);
+
       return {
         date: dateStr,
-        totalUsers: parseInt(data.total_users) || 0,
-        scheduledDeliveries: parseInt(data.scheduled_deliveries) || 0,
-        successfulDeliveries: parseInt(data.successful_deliveries) || 0,
-        failedDeliveries: parseInt(data.failed_deliveries) || 0,
-        deliveryRate: parseFloat(data.delivery_rate) || 0,
+        totalUsers,
+        scheduledDeliveries,
+        successfulDeliveries,
+        failedDeliveries,
+        deliveryRate: Math.round(deliveryRate * 100) / 100,
         avgResponseTime: 0, // TODO: Implement response time tracking
-        topFailureReasons: failures.map((f: any) => f.error_message || 'Unknown'),
-        systemHealth: this.calculateSystemHealth(parseFloat(data.delivery_rate) || 0)
+        topFailureReasons,
+        systemHealth: this.calculateSystemHealth(deliveryRate)
       };
     } catch (error) {
       console.error('Error getting daily metrics:', error);
