@@ -525,14 +525,18 @@ export class DatabaseStorage implements IStorage {
           ));
         
         if (existing.length === 0) {
+          // Pre-select question for this user to avoid selection during delivery
+          const questionId = await this.preSelectQuestionForUser(user);
+          
           await db.insert(deliveryQueue).values({
             userId: user.id,
             scheduledFor: utcTimestamp,
             status: 'pending',
-            attempts: 0
+            attempts: 0,
+            questionId: questionId
           });
           count++;
-          console.log(`✅ Scheduled ${user.phoneNumber} for ${utcTimestamp.toISOString()} (${user.preferredTime} ${user.timezone})`);
+          console.log(`✅ Scheduled ${user.phoneNumber} for ${utcTimestamp.toISOString()} (${user.preferredTime} ${user.timezone}) with question ${questionId || 'none'}`);
         }
       } catch (error) {
         console.error(`Failed to schedule user ${user.id}:`, error);
@@ -665,6 +669,55 @@ export class DatabaseStorage implements IStorage {
         lt(deliveryQueue.scheduledFor, tomorrow)
       ))
       .orderBy(deliveryQueue.scheduledFor);
+  }
+
+  async getQuestion(questionId: number): Promise<Question | null> {
+    const result = await db
+      .select()
+      .from(questions)
+      .where(eq(questions.id, questionId))
+      .limit(1);
+    
+    return result[0] || null;
+  }
+
+  async preSelectQuestionForUser(user: any): Promise<number | null> {
+    try {
+      // Get user's answered questions
+      const userAnswers = await this.getUserAnswers(user.id, 1000);
+      const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
+      
+      // Select category (rotate through user preferences)
+      const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+        ? user.categoryPreferences 
+        : ['general'];
+      const categoryIndex = user.questionsAnswered % userCategories.length;
+      const todayCategory = userCategories[categoryIndex];
+      
+      // Try to get existing question from preferred category
+      let question = await this.getRandomQuestion([todayCategory], answeredQuestionIds);
+      
+      if (!question) {
+        console.log(`⚠️ No unused questions found for category ${todayCategory} for user ${user.phoneNumber}, using fallback`);
+        // Use existing questions from any of user's categories as fallback
+        question = await this.getRandomQuestion(userCategories, answeredQuestionIds);
+        if (!question) {
+          // Last resort: use any question from database 
+          question = await this.getRandomQuestion([], []);
+        }
+      }
+      
+      if (question) {
+        console.log(`🎯 Pre-selected ${todayCategory} question for ${user.phoneNumber}: ${question.questionText.substring(0, 50)}...`);
+        return question.id;
+      }
+      
+      console.warn(`❌ No questions available for user ${user.phoneNumber}`);
+      return null;
+    } catch (error) {
+      console.error(`Error pre-selecting question for user ${user.phoneNumber}:`, error);
+      return null;
+    }
   }
 }
 

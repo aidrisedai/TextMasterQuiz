@@ -92,10 +92,14 @@ export class QueueSchedulerService {
       return;
     }
     
-    // Get or generate question
-    const question = await this.getQuestionForUser(user);
+    // Get pre-assigned question
+    let question = null;
+    if (delivery.questionId) {
+      question = await storage.getQuestion(delivery.questionId);
+    }
+    
     if (!question) {
-      await storage.markDeliveryAsFailed(delivery.id, 'No question available');
+      await storage.markDeliveryAsFailed(delivery.id, 'Pre-assigned question not found');
       return;
     }
     
@@ -138,39 +142,8 @@ export class QueueSchedulerService {
     }
   }
   
-  private async getQuestionForUser(user: any) {
-    try {
-      // Get user's answered questions
-      const userAnswers = await storage.getUserAnswers(user.id, 1000);
-      const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
-      
-      // Select category
-      const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
-        ? user.categoryPreferences 
-        : ['general'];
-      const categoryIndex = user.questionsAnswered % userCategories.length;
-      const todayCategory = userCategories[categoryIndex];
-      
-      // Try to get existing question
-      let question = await storage.getRandomQuestion([todayCategory], answeredQuestionIds);
-      
-      if (!question) {
-        // EMERGENCY STOP: Disable generation until query optimization is fixed
-        console.log(`⚠️ No unused questions found for category ${todayCategory}, using fallback instead of generating`);
-        // Use existing questions from any category as fallback
-        question = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
-        if (!question) {
-          // Last resort: use any question from database 
-          question = await storage.getRandomQuestion([], []);
-        }
-      }
-      
-      return question;
-    } catch (error) {
-      console.error('Error getting question for user:', error);
-      return null;
-    }
-  }
+  // REMOVED: getQuestionForUser method no longer needed
+  // Questions are now pre-selected during queue population for better performance
 }
 
 export const queueScheduler = new QueueSchedulerService();

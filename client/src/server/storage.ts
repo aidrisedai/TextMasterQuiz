@@ -1,6 +1,22 @@
-import { users, questions, userAnswers, adminUsers, generationJobs, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob } from "@shared/schema";
+import {
+  users,
+  questions,
+  userAnswers,
+  adminUsers,
+  generationJobs,
+  type User,
+  type InsertUser,
+  type Question,
+  type InsertQuestion,
+  type UserAnswer,
+  type InsertUserAnswer,
+  type AdminUser,
+  type InsertAdminUser,
+  type GenerationJob,
+  type InsertGenerationJob,
+} from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lt, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, isNull, inArray, notInArray } from "drizzle-orm";
 
 export interface IStorage {
   // User methods
@@ -9,18 +25,27 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, updates: Partial<User>): Promise<User | undefined>;
-  
+
   // Question methods
-  getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined>;
+  getRandomQuestion(
+    categories?: string[],
+    excludeIds?: number[],
+  ): Promise<Question | undefined>;
   getAllQuestions(): Promise<Question[]>;
   createQuestion(question: InsertQuestion): Promise<Question>;
   incrementQuestionUsage(id: number): Promise<void>;
-  
+
   // Answer methods
   recordAnswer(answer: InsertUserAnswer): Promise<UserAnswer>;
-  updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined>;
-  getUserAnswers(userId: number, limit?: number): Promise<(UserAnswer & { question: Question })[]>;
-  
+  updateAnswer(
+    answerId: number,
+    updates: Partial<UserAnswer>,
+  ): Promise<UserAnswer | undefined>;
+  getUserAnswers(
+    userId: number,
+    limit?: number,
+  ): Promise<(UserAnswer & { question: Question })[]>;
+
   // Stats methods
   getUserStats(userId: number): Promise<{
     currentStreak: number;
@@ -28,22 +53,28 @@ export interface IStorage {
     questionsAnswered: number;
     accuracyRate: number;
   }>;
-  
+
   // Admin methods
   getAdminByUsername(username: string): Promise<AdminUser | undefined>;
   createAdmin(admin: InsertAdminUser): Promise<AdminUser>;
   updateAdminLastLogin(id: number): Promise<void>;
-  
+
   // Duplicate prevention methods
   getPendingAnswersCount(userId: number): Promise<number>;
-  createPendingAnswerIfNone(userId: number, questionId: number): Promise<boolean>;
+  createPendingAnswerIfNone(
+    userId: number,
+    questionId: number,
+  ): Promise<boolean>;
   cleanupOrphanedPendingAnswers(): Promise<number>;
-  
+
   // Generation queue methods
   createGenerationJob(job: InsertGenerationJob): Promise<GenerationJob>;
   getGenerationJobs(): Promise<GenerationJob[]>;
   getNextPendingJob(): Promise<GenerationJob | undefined>;
-  updateGenerationJob(id: number, updates: Partial<GenerationJob>): Promise<GenerationJob | undefined>;
+  updateGenerationJob(
+    id: number,
+    updates: Partial<GenerationJob>,
+  ): Promise<GenerationJob | undefined>;
   deleteGenerationJob(id: number): Promise<void>;
   getActiveGenerationJobs(): Promise<GenerationJob[]>;
 }
@@ -55,7 +86,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getUserByPhoneNumber(phoneNumber: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.phoneNumber, phoneNumber));
+    const [user] = await db
+      .select()
+      .from(users)
+      .where(eq(users.phoneNumber, phoneNumber));
     return user || undefined;
   }
 
@@ -64,14 +98,14 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
+    const [user] = await db.insert(users).values(insertUser).returning();
     return user;
   }
 
-  async updateUser(id: number, updates: Partial<User>): Promise<User | undefined> {
+  async updateUser(
+    id: number,
+    updates: Partial<User>,
+  ): Promise<User | undefined> {
     const [user] = await db
       .update(users)
       .set(updates)
@@ -80,36 +114,42 @@ export class DatabaseStorage implements IStorage {
     return user || undefined;
   }
 
-  async getRandomQuestion(categories?: string[], excludeIds?: number[]): Promise<Question | undefined> {
-    // Get all questions first, then filter in memory for now
-    const allQuestions = await db.select().from(questions);
-    
-    let filteredQuestions = allQuestions;
-    
-    // Filter by categories if provided
+  async getRandomQuestion(
+    categories?: string[],
+    excludeIds?: number[],
+  ): Promise<Question | undefined> {
+    const filters: any[] = [];
+
     if (categories && categories.length > 0) {
-      filteredQuestions = filteredQuestions.filter(q => 
-        categories.includes(q.category)
-      );
+      filters.push(inArray(questions.category, categories));
     }
-    
-    // Exclude questions the user has already answered
     if (excludeIds && excludeIds.length > 0) {
-      filteredQuestions = filteredQuestions.filter(q => 
-        !excludeIds.includes(q.id)
-      );
+      filters.push(notInArray(questions.id, excludeIds));
     }
-    
-    if (filteredQuestions.length === 0) return undefined;
-    
-    // Sort by usage count (ascending) to prefer less-used questions
-    filteredQuestions.sort((a, b) => a.usageCount - b.usageCount);
-    
-    // Take the 10 least used questions and pick randomly from them
-    const leastUsed = filteredQuestions.slice(0, Math.min(10, filteredQuestions.length));
-    const randomIndex = Math.floor(Math.random() * leastUsed.length);
-    
-    return leastUsed[randomIndex];
+
+    // Step 1: get the minimum usageCount among eligible questions
+    const [{ minUsage }] = await db
+      .select({ minUsage: sql<number>`MIN(${questions.usageCount})` })
+      .from(questions)
+      .where(filters.length > 0 ? and(...filters) : undefined);
+
+    if (minUsage === null || minUsage === undefined) {
+      return undefined;
+    }
+
+    // Step 2: randomly pick 1 question from those with min usageCount
+    const result = await db
+      .select()
+      .from(questions)
+      .where(
+        filters.length > 0
+          ? and(sql`${questions.usageCount} = ${minUsage}`, ...filters)
+          : sql`${questions.usageCount} = ${minUsage}`,
+      )
+      .orderBy(sql`RANDOM()`) // works in SQLite + Postgres
+      .limit(1);
+
+    return result[0] || undefined;
   }
 
   async getAllQuestions(): Promise<Question[]> {
@@ -136,15 +176,17 @@ export class DatabaseStorage implements IStorage {
       .insert(userAnswers)
       .values(insertAnswer)
       .returning();
-    
+
     // Only update user stats if this is a completed answer (not a pending one)
     if (insertAnswer.userAnswer) {
       const user = await this.getUser(insertAnswer.userId);
       if (user) {
         const newQuestionsAnswered = user.questionsAnswered + 1;
-        const newCorrectAnswers = user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
-        const newTotalScore = user.totalScore + (insertAnswer.pointsEarned || 0);
-        
+        const newCorrectAnswers =
+          user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
+        const newTotalScore =
+          user.totalScore + (insertAnswer.pointsEarned || 0);
+
         // Calculate streak
         let newStreak = user.currentStreak;
         if (insertAnswer.isCorrect) {
@@ -152,7 +194,7 @@ export class DatabaseStorage implements IStorage {
         } else {
           newStreak = 0;
         }
-        
+
         await this.updateUser(insertAnswer.userId, {
           questionsAnswered: newQuestionsAnswered,
           correctAnswers: newCorrectAnswers,
@@ -163,25 +205,29 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     return answer;
   }
 
-  async updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined> {
+  async updateAnswer(
+    answerId: number,
+    updates: Partial<UserAnswer>,
+  ): Promise<UserAnswer | undefined> {
     const [answer] = await db
       .update(userAnswers)
       .set(updates)
       .where(eq(userAnswers.id, answerId))
       .returning();
-    
+
     // Update user stats if this is completing an answer
     if (answer && updates.userAnswer) {
       const user = await this.getUser(answer.userId);
       if (user) {
         const newQuestionsAnswered = user.questionsAnswered + 1;
-        const newCorrectAnswers = user.correctAnswers + (answer.isCorrect ? 1 : 0);
+        const newCorrectAnswers =
+          user.correctAnswers + (answer.isCorrect ? 1 : 0);
         const newTotalScore = user.totalScore + (answer.pointsEarned || 0);
-        
+
         // Calculate streak
         let newStreak = user.currentStreak;
         if (answer.isCorrect) {
@@ -189,7 +235,7 @@ export class DatabaseStorage implements IStorage {
         } else {
           newStreak = 0;
         }
-        
+
         await this.updateUser(answer.userId, {
           questionsAnswered: newQuestionsAnswered,
           correctAnswers: newCorrectAnswers,
@@ -200,11 +246,14 @@ export class DatabaseStorage implements IStorage {
         });
       }
     }
-    
+
     return answer;
   }
 
-  async getUserAnswers(userId: number, limit = 10): Promise<(UserAnswer & { question: Question })[]> {
+  async getUserAnswers(
+    userId: number,
+    limit = 10,
+  ): Promise<(UserAnswer & { question: Question })[]> {
     const results = await db
       .select({
         id: userAnswers.id,
@@ -221,8 +270,10 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userAnswers.userId, userId))
       .orderBy(desc(userAnswers.answeredAt))
       .limit(limit);
-    
-    return results.filter(result => result.question !== null) as (UserAnswer & { question: Question })[];
+
+    return results.filter(
+      (result) => result.question !== null,
+    ) as (UserAnswer & { question: Question })[];
   }
 
   async getUserStats(userId: number): Promise<{
@@ -240,11 +291,12 @@ export class DatabaseStorage implements IStorage {
         accuracyRate: 0,
       };
     }
-    
-    const accuracyRate = user.questionsAnswered > 0 
-      ? Math.round((user.correctAnswers / user.questionsAnswered) * 100)
-      : 0;
-    
+
+    const accuracyRate =
+      user.questionsAnswered > 0
+        ? Math.round((user.correctAnswers / user.questionsAnswered) * 100)
+        : 0;
+
     return {
       currentStreak: user.currentStreak,
       totalScore: user.totalScore,
@@ -258,31 +310,31 @@ export class DatabaseStorage implements IStorage {
       .select({ count: sql<number>`count(*)` })
       .from(userAnswers)
       .where(
-        and(
-          eq(userAnswers.userId, userId),
-          isNull(userAnswers.userAnswer)
-        )
+        and(eq(userAnswers.userId, userId), isNull(userAnswers.userAnswer)),
       );
-    
+
     return result[0]?.count || 0;
   }
 
   // Atomic method to check and create pending answer - prevents race conditions
-  async createPendingAnswerIfNone(userId: number, questionId: number): Promise<boolean> {
+  async createPendingAnswerIfNone(
+    userId: number,
+    questionId: number,
+  ): Promise<boolean> {
     try {
       return await db.transaction(async (tx) => {
         // Check for existing pending answers within transaction
-        const existing = await tx.select({ count: sql<number>`count(*)` })
+        const existing = await tx
+          .select({ count: sql<number>`count(*)` })
           .from(userAnswers)
-          .where(and(
-            eq(userAnswers.userId, userId),
-            isNull(userAnswers.userAnswer)
-          ));
-        
+          .where(
+            and(eq(userAnswers.userId, userId), isNull(userAnswers.userAnswer)),
+          );
+
         if (existing[0].count > 0) {
           return false; // Already has pending answer
         }
-        
+
         // Atomically create pending answer
         await tx.insert(userAnswers).values({
           userId,
@@ -291,11 +343,11 @@ export class DatabaseStorage implements IStorage {
           isCorrect: false,
           pointsEarned: 0,
         });
-        
+
         return true; // Successfully created
       });
     } catch (error) {
-      console.error('Error creating pending answer:', error);
+      console.error("Error creating pending answer:", error);
       return false;
     }
   }
@@ -303,28 +355,31 @@ export class DatabaseStorage implements IStorage {
   // Cleanup orphaned pending answers (for SMS failures)
   async cleanupOrphanedPendingAnswers(): Promise<number> {
     try {
-      const result = await db.delete(userAnswers)
-        .where(and(
-          isNull(userAnswers.userAnswer),
-          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '24 hours'`
-        ));
+      const result = await db
+        .delete(userAnswers)
+        .where(
+          and(
+            isNull(userAnswers.userAnswer),
+            sql`${userAnswers.answeredAt} < NOW() - INTERVAL '24 hours'`,
+          ),
+        );
       return result.rowCount || 0;
     } catch (error) {
-      console.error('Error cleaning up orphaned pending answers:', error);
+      console.error("Error cleaning up orphaned pending answers:", error);
       return 0;
     }
   }
 
   async getAdminByUsername(username: string): Promise<AdminUser | undefined> {
-    const [admin] = await db.select().from(adminUsers).where(eq(adminUsers.username, username));
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.username, username));
     return admin || undefined;
   }
 
   async createAdmin(insertAdmin: InsertAdminUser): Promise<AdminUser> {
-    const [admin] = await db
-      .insert(adminUsers)
-      .values(insertAdmin)
-      .returning();
+    const [admin] = await db.insert(adminUsers).values(insertAdmin).returning();
     return admin;
   }
 
@@ -336,7 +391,9 @@ export class DatabaseStorage implements IStorage {
   }
 
   // Generation queue methods
-  async createGenerationJob(insertJob: InsertGenerationJob): Promise<GenerationJob> {
+  async createGenerationJob(
+    insertJob: InsertGenerationJob,
+  ): Promise<GenerationJob> {
     const [job] = await db
       .insert(generationJobs)
       .values({
@@ -364,7 +421,10 @@ export class DatabaseStorage implements IStorage {
     return job || undefined;
   }
 
-  async updateGenerationJob(id: number, updates: Partial<GenerationJob>): Promise<GenerationJob | undefined> {
+  async updateGenerationJob(
+    id: number,
+    updates: Partial<GenerationJob>,
+  ): Promise<GenerationJob | undefined> {
     const [job] = await db
       .update(generationJobs)
       .set(updates)
@@ -374,9 +434,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteGenerationJob(id: number): Promise<void> {
-    await db
-      .delete(generationJobs)
-      .where(eq(generationJobs.id, id));
+    await db.delete(generationJobs).where(eq(generationJobs.id, id));
   }
 
   async getActiveGenerationJobs(): Promise<GenerationJob[]> {
