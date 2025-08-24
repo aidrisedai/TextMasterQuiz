@@ -72,6 +72,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize NEW queue-based scheduler (old one was disabled due to critical bugs)
   queueScheduler.init();
   
+  // Start monitoring service
+  const { monitoringService } = await import('./services/monitoring.js');
+  const { dailyCronService } = await import('./services/daily-cron.js');
+  
+  monitoringService.startHealthMonitoring();
+  dailyCronService.init();
+  
   // Queue automatically repopulated - endpoint removed
   
   // Start queue processor for generation jobs

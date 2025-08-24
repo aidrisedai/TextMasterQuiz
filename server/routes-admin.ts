@@ -9,10 +9,56 @@ import { queueScheduler } from './services/queue-scheduler.js';
 import { insertGenerationJobSchema, insertBroadcastSchema } from '@shared/schema';
 import { z } from 'zod';
 import { generationManager } from './services/generation-manager.js';
+import { monitoringService } from './services/monitoring.js';
 
 const router = Router();
 
-// Emergency fix completed - endpoint removed
+// Monitoring endpoints
+router.get('/monitoring/health', async (req, res) => {
+  try {
+    const health = await monitoringService.performHealthCheck();
+    res.json(health);
+  } catch (error) {
+    console.error('Health check error:', error);
+    res.status(500).json({ error: 'Health check failed' });
+  }
+});
+
+router.get('/monitoring/daily/:date?', async (req, res) => {
+  try {
+    const date = req.params.date ? new Date(req.params.date) : undefined;
+    const metrics = await monitoringService.getDailyMetrics(date);
+    res.json(metrics);
+  } catch (error) {
+    console.error('Daily metrics error:', error);
+    res.status(500).json({ error: 'Failed to get daily metrics' });
+  }
+});
+
+router.get('/monitoring/report/:date?', async (req, res) => {
+  try {
+    const date = req.params.date ? new Date(req.params.date) : undefined;
+    const report = await monitoringService.generateDailyReport(date);
+    res.type('text/plain').send(report);
+  } catch (error) {
+    console.error('Daily report error:', error);
+    res.status(500).json({ error: 'Failed to generate daily report' });
+  }
+});
+
+router.post('/monitoring/synthetic-test', async (req, res) => {
+  try {
+    const success = await monitoringService.runSyntheticTest();
+    res.json({ 
+      success, 
+      message: success ? 'Synthetic test passed' : 'Synthetic test failed',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('Synthetic test error:', error);
+    res.status(500).json({ error: 'Synthetic test failed' });
+  }
+});
 
 // Note: Admin authentication middleware is applied at the app level in routes.ts
 
