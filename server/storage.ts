@@ -547,67 +547,49 @@ export class DatabaseStorage implements IStorage {
   }
   
   private localTimeToUTC(localDateStr: string, timezone: string): Date {
-    // Convert local time to UTC using a simpler approach
-    // The input localDateStr is like "2025-08-20T21:00:00"
+    // Convert local time to UTC using a much simpler, reliable approach
+    // The input localDateStr is like "2025-08-24T21:00:00"
     
-    // Parse the date components
+    // Parse the input date/time
     const [datePart, timePart] = localDateStr.split('T');
     const [year, month, day] = datePart.split('-').map(Number);
     const [hour, minute] = timePart.split(':').map(Number);
     
-    // Create a base date at midnight UTC for the target day
-    const baseDate = new Date(Date.UTC(year, month - 1, day, 0, 0, 0));
-    
-    // Get the offset for this timezone on this date
-    // We need to check what the offset is for this specific date (handles DST)
-    const testDate = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
-    
-    // Format the test date in the target timezone to see what local time it represents
-    const formatter = new Intl.DateTimeFormat('en-US', {
-      timeZone: timezone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: false
-    });
-    
-    // Binary search for the correct UTC time
-    // We know it's within 24 hours of our test date
-    let low = testDate.getTime() - 24 * 60 * 60 * 1000;
-    let high = testDate.getTime() + 24 * 60 * 60 * 1000;
-    
-    while (high - low > 60000) { // Search until we're within 1 minute
-      const mid = Math.floor((low + high) / 2);
-      const midDate = new Date(mid);
+    // Use the standard approach: create a Date in the target timezone
+    // then get its UTC equivalent
+    try {
+      // Create a date string that will be interpreted in the target timezone
+      const tempDateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}T${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:00.000`;
       
-      const formatted = formatter.format(midDate);
-      // Parse formatted string "MM/DD/YYYY, HH:MM"
-      const [datePart, timePart] = formatted.split(', ');
-      const [formHour, formMinute] = timePart.split(':').map(Number);
+      // Create a temp date to get the timezone offset for this specific date/time
+      const tempDate = new Date(tempDateStr);
       
-      if (formHour < hour || (formHour === hour && formMinute < minute)) {
-        low = mid;
-      } else {
-        high = mid;
+      // Get timezone offset in minutes for this specific date (handles DST automatically)
+      const offsetStr = tempDate.toLocaleString('sv-SE', { timeZone: timezone, timeZoneName: 'longOffset' });
+      const offsetMatch = offsetStr.match(/([+-])(\d{2}):(\d{2})/);
+      
+      if (!offsetMatch) {
+        // Fallback: use a simpler method
+        const utcDate = new Date(`${tempDateStr}Z`); // Parse as UTC first
+        const localCheck = new Date(utcDate.toLocaleString('en-US', { timeZone: timezone }));
+        const offset = utcDate.getTime() - localCheck.getTime();
+        return new Date(utcDate.getTime() + offset);
       }
+      
+      const [, sign, offsetHours, offsetMinutes] = offsetMatch;
+      const totalOffsetMinutes = (parseInt(offsetHours) * 60 + parseInt(offsetMinutes)) * (sign === '+' ? 1 : -1);
+      
+      // Create UTC time by subtracting the offset
+      const utcTime = new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+      utcTime.setMinutes(utcTime.getMinutes() - totalOffsetMinutes);
+      
+      return utcTime;
+      
+    } catch (error) {
+      console.error(`Timezone conversion error for ${localDateStr} ${timezone}:`, error);
+      // Fallback: assume UTC (better than crashing)
+      return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
     }
-    
-    // Return the found UTC time
-    const result = new Date(Math.floor((low + high) / 2));
-    
-    // Verify the result
-    const check = formatter.format(result);
-    const [checkDate, checkTime] = check.split(', ');
-    const [checkHour, checkMinute] = checkTime.split(':').map(Number);
-    
-    if (checkHour !== hour || checkMinute !== minute) {
-      console.warn(`Warning: Time conversion mismatch for ${localDateStr} ${timezone}`);
-      console.warn(`Wanted ${hour}:${minute}, got ${checkHour}:${checkMinute}`);
-    }
-    
-    return result;
   }
 
   async getDeliveriesToSend(currentTime: Date): Promise<DeliveryQueue[]> {
