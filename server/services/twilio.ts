@@ -19,7 +19,24 @@ export interface SMSMessage {
 }
 
 export class TwilioService {
+  private statusTimeouts = new Map<string, NodeJS.Timeout>();
+  private lastSendTime = 0;
+  private readonly RATE_LIMIT_MS = 1000; // 1 second between messages
+
   async sendSMS(message: SMSMessage): Promise<boolean> {
+    // Rate limiting
+    const now = Date.now();
+    const timeSinceLastSend = now - this.lastSendTime;
+    if (timeSinceLastSend < this.RATE_LIMIT_MS) {
+      await new Promise(resolve => setTimeout(resolve, this.RATE_LIMIT_MS - timeSinceLastSend));
+    }
+    this.lastSendTime = Date.now();
+
+    // Message length validation
+    if (message.body.length > 1600) {
+      console.warn(`Message too long (${message.body.length} chars), truncating`);
+      message.body = message.body.substring(0, 1597) + '...';
+    }
     if (!accountSid || !authToken || !phoneNumber) {
       console.log("Missing Twilio credentials - SMS would be sent:", message);
       return false;
@@ -40,8 +57,9 @@ export class TwilioService {
 
       console.log(`SMS queued: ${result.sid}`);
 
-      // Check delivery status after a delay
-      setTimeout(async () => {
+      // Check delivery status after a delay with cleanup
+      const timeoutId = setTimeout(async () => {
+        this.statusTimeouts.delete(result.sid);
         try {
           const status = await client.messages(result.sid).fetch();
           if (status.status === "delivered") {
@@ -72,6 +90,8 @@ export class TwilioService {
           console.log(`📋 SMS content for ${message.to}: ${message.body}`);
         }
       }, 2000);
+      
+      this.statusTimeouts.set(result.sid, timeoutId);
 
       return true;
     } catch (error: any) {
@@ -79,6 +99,12 @@ export class TwilioService {
       console.log(`📋 Would send to ${message.to}: ${message.body}`);
       return false;
     }
+  }
+
+  // Cleanup method for graceful shutdown
+  cleanup() {
+    this.statusTimeouts.forEach(timeout => clearTimeout(timeout));
+    this.statusTimeouts.clear();
   }
 
   async sendDailyQuestion(

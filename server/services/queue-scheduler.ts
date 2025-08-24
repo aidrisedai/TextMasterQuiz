@@ -2,6 +2,7 @@ import * as cron from 'node-cron';
 import { storage } from '../storage';
 import { twilioService } from './twilio';
 import { geminiService } from './gemini';
+import { smsHealthMonitor } from './sms-health-monitor';
 
 export class QueueSchedulerService {
   private jobs = new Map<string, cron.ScheduledTask>();
@@ -62,9 +63,19 @@ export class QueueSchedulerService {
       
       console.log(`📬 Found ${deliveries.length} deliveries to process`);
       
-      for (const delivery of deliveries) {
+      // Rate limiting: process max 10 deliveries per batch
+      const batchSize = Math.min(deliveries.length, 10);
+      const batch = deliveries.slice(0, batchSize);
+      
+      if (deliveries.length > batchSize) {
+        console.log(`⚠️ Rate limiting: processing ${batchSize} of ${deliveries.length} deliveries`);
+      }
+      
+      for (const delivery of batch) {
         try {
           await this.sendScheduledDelivery(delivery);
+          // Small delay between sends to respect rate limits
+          await new Promise(resolve => setTimeout(resolve, 100));
         } catch (error) {
           console.error(`Failed to process delivery ${delivery.id}:`, error);
           await storage.markDeliveryAsFailed(
@@ -103,15 +114,26 @@ export class QueueSchedulerService {
       return;
     }
     
-    // Format message
+    // Format message with length optimization
     const questionNumber = user.questionsAnswered + 1;
-    const message = `🧠 Question #${questionNumber}: ${question.questionText}\n\n` +
+    let message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
       `A) ${question.optionA}\n` +
       `B) ${question.optionB}\n` +
       `C) ${question.optionC}\n` +
       `D) ${question.optionD}\n\n` +
-      `Reply with A, B, C, or D`;
+      `Reply A, B, C, or D`;
     
+    // If message is too long, try shorter format
+    if (message.length > 1400) {
+      message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
+        `A)${question.optionA}\nB)${question.optionB}\nC)${question.optionC}\nD)${question.optionD}\n\nReply A/B/C/D`;
+    }
+    
+    // Check SMS health before sending
+    if (!smsHealthMonitor.isHealthy()) {
+      throw new Error('SMS service circuit breaker is open');
+    }
+
     // Send SMS
     const smsSuccess = await twilioService.sendSMS({
       to: user.phoneNumber,
@@ -119,6 +141,7 @@ export class QueueSchedulerService {
     });
     
     if (smsSuccess) {
+      smsHealthMonitor.recordSuccess();
       // Create pending answer record
       await storage.recordAnswer({
         userId: user.id,
@@ -138,6 +161,7 @@ export class QueueSchedulerService {
       
       console.log(`✅ Sent question to ${user.phoneNumber}`);
     } else {
+      smsHealthMonitor.recordFailure();
       throw new Error('SMS send failed');
     }
   }
