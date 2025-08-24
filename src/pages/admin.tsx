@@ -1676,8 +1676,8 @@ function AdminMonitoring() {
     try {
       setLoading(true);
       const [healthRes, metricsRes] = await Promise.all([
-        fetch('/admin/monitoring/health'),
-        fetch('/admin/monitoring/daily')
+        fetch('/api/admin/monitoring/health', { credentials: 'include' }),
+        fetch('/api/admin/monitoring/daily', { credentials: 'include' })
       ]);
       
       if (healthRes.ok) setHealth(await healthRes.json());
@@ -1691,7 +1691,10 @@ function AdminMonitoring() {
 
   const runSyntheticTest = async () => {
     try {
-      const response = await fetch('/admin/monitoring/synthetic-test', { method: 'POST' });
+      const response = await fetch('/api/admin/monitoring/synthetic-test', { 
+        method: 'POST',
+        credentials: 'include'
+      });
       const result = await response.json();
       toast({ 
         title: result.success ? "Test Passed" : "Test Failed", 
