@@ -124,7 +124,7 @@ export default function AdminPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUsersLoading, setIsUsersLoading] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [activeTab, setActiveTab] = useState<string>('questions');
+  const [activeTab, setActiveTab] = useState<string>('monitoring');
   const [authStatus, setAuthStatus] = useState<AuthStatus>({ authenticated: false });
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -840,12 +840,12 @@ export default function AdminPage() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="flex w-full h-10">
+          <TabsTrigger value="monitoring" className="flex-1">Monitoring</TabsTrigger>
           <TabsTrigger value="questions" className="flex-1">Questions</TabsTrigger>
           <TabsTrigger value="users" className="flex-1">Users</TabsTrigger>
           <TabsTrigger value="generation" className="flex-1">Generation</TabsTrigger>
           <TabsTrigger value="broadcast" className="flex-1">Broadcast</TabsTrigger>
           <TabsTrigger value="categories" className="flex-1">Categories</TabsTrigger>
-          <TabsTrigger value="monitoring" className="flex-1">Monitoring</TabsTrigger>
         </TabsList>
         
         <TabsContent value="questions" className="space-y-4">
