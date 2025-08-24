@@ -12,6 +12,8 @@ import { generationManager } from './services/generation-manager.js';
 
 const router = Router();
 
+// Emergency fix completed - endpoint removed
+
 // Note: Admin authentication middleware is applied at the app level in routes.ts
 
 // Get generation status

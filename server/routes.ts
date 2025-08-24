@@ -72,6 +72,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize NEW queue-based scheduler (old one was disabled due to critical bugs)
   queueScheduler.init();
   
+  // Emergency fix completed - endpoint removed
+  
   // Start queue processor for generation jobs
   // DISABLED: Queue processor was continuously generating questions from stuck jobs
   // Uncomment only when you need to run generation or broadcast jobs
