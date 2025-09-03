@@ -4,8 +4,9 @@ import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
-// import { schedulerService } from "./services/scheduler"; // OLD BROKEN SCHEDULER - DISABLED
-import { queueScheduler } from "./services/queue-scheduler"; // NEW QUEUE-BASED SCHEDULER
+// import { schedulerService } from "./services/scheduler"; // OLD BROKEN SCHEDULER - DISABLED  
+import { queueScheduler } from "./services/queue-scheduler"; // OLD BATCH SCHEDULER (15-min intervals)
+import { precisionScheduler } from "./services/precision-scheduler"; // NEW PRECISION SCHEDULER (exact timing)
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
 import simpleTestRoutes from "./routes-test-simple";
@@ -82,8 +83,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize NEW queue-based scheduler (old one was disabled due to critical bugs)
-  queueScheduler.init();
+  // Initialize PRECISION scheduler (replaces 15-minute batch processing with exact timing)
+  precisionScheduler.init();
   
   // Start monitoring service
   const { monitoringService } = await import('./services/monitoring.js');

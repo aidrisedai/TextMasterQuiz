@@ -593,7 +593,7 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getDeliveriesToSend(currentTime: Date): Promise<DeliveryQueue[]> {
-    // Get deliveries scheduled for now or earlier that haven't been sent
+    // PRECISION SCHEDULING: Get deliveries for exact time window
     const windowEnd = new Date(currentTime);
     windowEnd.setMinutes(windowEnd.getMinutes() + 5); // 5 minute window
     
@@ -603,7 +603,7 @@ export class DatabaseStorage implements IStorage {
       .where(and(
         eq(deliveryQueue.status, 'pending'),
         lte(deliveryQueue.scheduledFor, windowEnd),
-        lt(deliveryQueue.attempts, 3) // Max 3 attempts
+        eq(deliveryQueue.attempts, 0) // SINGLE-ATTEMPT: Only process never-attempted deliveries
       ))
       .orderBy(deliveryQueue.scheduledFor);
   }
@@ -620,21 +620,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async markDeliveryAsFailed(id: number, error: string): Promise<void> {
-    const [current] = await db
-      .select()
-      .from(deliveryQueue)
+    // SINGLE-ATTEMPT: Always mark as failed, no retries
+    await db
+      .update(deliveryQueue)
+      .set({
+        status: 'failed',
+        attempts: 1,
+        errorMessage: error
+      })
       .where(eq(deliveryQueue.id, id));
-    
-    if (current) {
-      await db
-        .update(deliveryQueue)
-        .set({
-          status: current.attempts >= 2 ? 'failed' : 'pending',
-          attempts: current.attempts + 1,
-          errorMessage: error
-        })
-        .where(eq(deliveryQueue.id, id));
-    }
   }
 
   async getTodayDeliveryStatus(): Promise<DeliveryQueue[]> {
