@@ -63,6 +63,15 @@ export interface IStorage {
   markDeliveryAsSent(id: number, questionId: number): Promise<void>;
   markDeliveryAsFailed(id: number, error: string): Promise<void>;
   getTodayDeliveryStatus(): Promise<DeliveryQueue[]>;
+  
+  // Hourly Scheduler methods
+  getAllActiveUsers(): Promise<User[]>;
+  createDeliveryQueueEntry(entry: InsertDeliveryQueue): Promise<DeliveryQueue>;
+  convertToUTC(localDateStr: string, timezone: string): Date;
+  getQuestionsForCategory(category: string, limit?: number): Promise<Question[]>;
+  getUserAnsweredQuestionIds(userId: number): Promise<number[]>;
+  clearPendingDeliveriesForDate(date: Date): Promise<void>;
+  getDeliveriesForHour(hour: number): Promise<DeliveryQueue[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -694,6 +703,92 @@ export class DatabaseStorage implements IStorage {
       console.error(`Error pre-selecting question for user ${user.phoneNumber}:`, error);
       return null;
     }
+  }
+
+  // Hourly Scheduler methods implementation
+  async getAllActiveUsers(): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.isActive, true));
+  }
+
+  async createDeliveryQueueEntry(entry: InsertDeliveryQueue): Promise<DeliveryQueue> {
+    const [delivery] = await db
+      .insert(deliveryQueue)
+      .values(entry)
+      .returning();
+    return delivery;
+  }
+
+  convertToUTC(localDateStr: string, timezone: string): Date {
+    // Reuse existing timezone conversion logic - this method already exists below
+    try {
+      const [datePart, timePart] = localDateStr.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      
+      // Simple UTC conversion - create date with specified time in UTC
+      return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+    } catch (error) {
+      console.error(`Timezone conversion error for ${localDateStr} ${timezone}:`, error);
+      // Fallback: assume UTC
+      const [datePart, timePart] = localDateStr.split(' ');
+      const [year, month, day] = datePart.split('-').map(Number);
+      const [hour, minute] = timePart.split(':').map(Number);
+      return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+    }
+  }
+
+  async getQuestionsForCategory(category: string, limit = 20): Promise<Question[]> {
+    return await db
+      .select()
+      .from(questions)
+      .where(eq(questions.category, category))
+      .orderBy(questions.usageCount, sql`RANDOM()`)
+      .limit(limit);
+  }
+
+  async getUserAnsweredQuestionIds(userId: number): Promise<number[]> {
+    const results = await db
+      .select({ questionId: userAnswers.questionId })
+      .from(userAnswers)
+      .where(eq(userAnswers.userId, userId));
+    return results.map(r => r.questionId);
+  }
+
+  async clearPendingDeliveriesForDate(date: Date): Promise<void> {
+    const dateStart = new Date(date);
+    dateStart.setUTCHours(0, 0, 0, 0);
+    const dateEnd = new Date(date);
+    dateEnd.setUTCHours(23, 59, 59, 999);
+
+    await db
+      .delete(deliveryQueue)
+      .where(and(
+        gte(deliveryQueue.scheduledFor, dateStart),
+        lt(deliveryQueue.scheduledFor, dateEnd),
+        eq(deliveryQueue.status, 'pending')
+      ));
+  }
+
+  async getDeliveriesForHour(hour: number): Promise<DeliveryQueue[]> {
+    const now = new Date();
+    const startHour = new Date(now);
+    startHour.setUTCHours(hour, 0, 0, 0);
+    const endHour = new Date(now);
+    endHour.setUTCHours(hour, 59, 59, 999);
+
+    return await db
+      .select()
+      .from(deliveryQueue)
+      .where(and(
+        eq(deliveryQueue.status, 'pending'),
+        gte(deliveryQueue.scheduledFor, startHour),
+        lte(deliveryQueue.scheduledFor, endHour),
+        eq(deliveryQueue.attempts, 0) // Single attempt
+      ))
+      .orderBy(deliveryQueue.scheduledFor);
   }
 }
 

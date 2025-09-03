@@ -19,6 +19,7 @@ export const users = pgTable("users", {
   questionsAnswered: integer("questions_answered").notNull().default(0),
   correctAnswers: integer("correct_answers").notNull().default(0),
   acceptsBroadcasts: boolean("accepts_broadcasts").notNull().default(true),
+  currentCategoryIndex: integer("current_category_index").notNull().default(0), // For category rotation
 });
 
 export const questions = pgTable("questions", {

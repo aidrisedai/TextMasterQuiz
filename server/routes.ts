@@ -6,7 +6,8 @@ import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
 // import { schedulerService } from "./services/scheduler"; // OLD BROKEN SCHEDULER - DISABLED  
 import { queueScheduler } from "./services/queue-scheduler"; // OLD BATCH SCHEDULER (15-min intervals)
-import { precisionScheduler } from "./services/precision-scheduler"; // NEW PRECISION SCHEDULER (exact timing)
+import { precisionScheduler } from "./services/precision-scheduler"; // OLD PRECISION SCHEDULER (individual cron jobs)
+import { hourlyScheduler } from "./services/hourly-scheduler"; // NEW HOURLY SCHEDULER (23:30 + hourly)
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
 import simpleTestRoutes from "./routes-test-simple";
@@ -83,8 +84,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize PRECISION scheduler (replaces 15-minute batch processing with exact timing)
-  precisionScheduler.init();
+  // Initialize HOURLY scheduler (23:30 population + hourly delivery - scalable & simple)
+  hourlyScheduler.init();
   
   // Start monitoring service
   const { monitoringService } = await import('./services/monitoring.js');
