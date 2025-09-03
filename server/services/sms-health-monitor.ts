@@ -7,6 +7,15 @@ export class SMSHealthMonitor {
   private circuitOpen = false;
   private lastFailureTime = 0;
 
+  // Method to manually reset circuit breaker
+  forceReset() {
+    console.log('🔄 Manually resetting SMS circuit breaker...');
+    this.circuitOpen = false;
+    this.consecutiveFailures = 0;
+    this.lastFailureTime = 0;
+    console.log('✅ SMS circuit breaker manually reset');
+  }
+
   isHealthy(): boolean {
     if (this.circuitOpen) {
       const now = Date.now();
