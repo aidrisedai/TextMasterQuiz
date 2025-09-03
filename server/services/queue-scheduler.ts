@@ -166,8 +166,72 @@ export class QueueSchedulerService {
     }
   }
   
-  // REMOVED: getQuestionForUser method no longer needed
-  // Questions are now pre-selected during queue population for better performance
+  // Manual question sending (for admin testing)
+  async sendQuestionNow(phoneNumber: string): Promise<void> {
+    const user = await storage.getUserByPhoneNumber(phoneNumber);
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    if (!user.isActive) {
+      throw new Error('User is inactive');
+    }
+
+    // Check SMS health before sending
+    if (!smsHealthMonitor.isHealthy()) {
+      throw new Error('SMS service circuit breaker is open');
+    }
+
+    // Get a random question for the user's categories
+    const question = await storage.getRandomQuestion(user.categoryPreferences || undefined);
+    if (!question) {
+      throw new Error('No questions available');
+    }
+
+    // Format message
+    const questionNumber = user.questionsAnswered + 1;
+    let message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
+      `A) ${question.optionA}\n` +
+      `B) ${question.optionB}\n` +
+      `C) ${question.optionC}\n` +
+      `D) ${question.optionD}\n\n` +
+      `Reply A, B, C, or D`;
+
+    // If message is too long, try shorter format
+    if (message.length > 1400) {
+      message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
+        `A)${question.optionA}\nB)${question.optionB}\nC)${question.optionC}\nD)${question.optionD}\n\nReply A/B/C/D`;
+    }
+
+    // Send SMS
+    const smsSuccess = await twilioService.sendSMS({
+      to: user.phoneNumber,
+      body: message
+    });
+
+    if (smsSuccess) {
+      smsHealthMonitor.recordSuccess();
+      
+      // Create pending answer record
+      await storage.recordAnswer({
+        userId: user.id,
+        questionId: question.id,
+        userAnswer: null,
+        isCorrect: false,
+        pointsEarned: 0
+      });
+      
+      // Update user's last quiz date
+      await storage.updateUser(user.id, { 
+        lastQuizDate: new Date() 
+      });
+      
+      console.log(`✅ Sent manual question to ${user.phoneNumber}`);
+    } else {
+      smsHealthMonitor.recordFailure();
+      throw new Error('SMS send failed');
+    }
+  }
 }
 
 export const queueScheduler = new QueueSchedulerService();

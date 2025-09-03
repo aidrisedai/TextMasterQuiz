@@ -18,6 +18,19 @@ import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 
+// Extend session type to include adminUser
+declare module "express-session" {
+  interface SessionData {
+    adminUser?: {
+      id: number;
+      username: string;
+      name: string;
+      email: string | null;
+      isAdmin: boolean;
+    };
+  }
+}
+
 const signupSchema = insertUserSchema.extend({
   terms: z.boolean().refine(val => val === true, {
     message: "You must accept the terms and conditions"
@@ -312,7 +325,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      await schedulerService.sendQuestionNow(phoneNumber);
+      // Use queue scheduler to send question immediately
+      await queueScheduler.sendQuestionNow(phoneNumber);
       res.json({ message: "Question sent successfully" });
     } catch (error: any) {
       console.error("Send question error:", error);
@@ -406,7 +420,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session.adminUser = null;
+    req.session.adminUser = undefined;
     res.json({ message: "Logout successful" });
   });
 
