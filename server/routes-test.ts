@@ -194,4 +194,37 @@ router.post('/webhook-simulation', async (req, res) => {
   }
 });
 
+// Simple SMS test - just one message
+router.post('/sms-simple', async (req, res) => {
+  try {
+    const { phoneNumber = '+15153570454' } = req.body;
+
+    console.log('🧪 Testing SMS delivery...');
+
+    // Single SMS test
+    const testResult = await twilioService.sendSMS({
+      to: phoneNumber,
+      body: '✅ Text4Quiz SMS test successful! Your system is working properly.'
+    });
+
+    console.log(`📊 SMS Test Complete: ${testResult ? 'Success' : 'Failed'}`);
+
+    res.json({
+      success: testResult,
+      message: testResult ? 
+        'SMS delivery test passed!' : 
+        'SMS delivery test failed',
+      phoneNumber: phoneNumber,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('SMS test error:', error);
+    res.status(500).json({ 
+      success: false, 
+      error: 'Failed to test SMS delivery',
+      details: error.message 
+    });
+  }
+});
+
 export default router;
