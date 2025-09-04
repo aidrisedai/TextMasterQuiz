@@ -8,6 +8,7 @@ import { geminiService } from "./services/gemini";
 import { queueScheduler } from "./services/queue-scheduler"; // OLD BATCH SCHEDULER (15-min intervals)
 import { precisionScheduler } from "./services/precision-scheduler"; // OLD PRECISION SCHEDULER (individual cron jobs)
 import { hourlyScheduler } from "./services/hourly-scheduler"; // NEW HOURLY SCHEDULER (23:30 + hourly)
+import { proactiveAlerts } from "./services/proactive-alerts"; // PROACTIVE ALERT SYSTEM
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
 import simpleTestRoutes from "./routes-test-simple";
@@ -86,6 +87,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Initialize HOURLY scheduler (23:30 population + hourly delivery - scalable & simple)
   hourlyScheduler.init();
+  
+  // Initialize PROACTIVE ALERTS (prevent incidents like Aug 27 SMS outage)
+  proactiveAlerts.init({
+    adminPhoneNumber: '+15153570454', // Your phone number for critical SMS alerts
+    enabledChannels: ['sms'] // Start with SMS only, can add email/webhook later
+  });
   
   // Start monitoring service
   const { monitoringService } = await import('./services/monitoring.js');

@@ -933,4 +933,48 @@ router.post('/trigger-queue', async (req, res) => {
   }
 });
 
+// Proactive Alerts Management
+router.get('/alerts/active', async (req, res) => {
+  try {
+    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const activeAlerts = proactiveAlerts.getActiveAlerts();
+    res.json({ activeAlerts });
+  } catch (error) {
+    console.error('Get active alerts error:', error);
+    res.status(500).json({ error: 'Failed to get active alerts' });
+  }
+});
+
+router.post('/alerts/configure', async (req, res) => {
+  try {
+    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const { adminPhoneNumber, adminEmail, webhookUrl, enabledChannels } = req.body;
+    
+    proactiveAlerts.updateConfig({
+      adminPhoneNumber,
+      adminEmail, 
+      webhookUrl,
+      enabledChannels
+    });
+    
+    res.json({ message: 'Alert configuration updated successfully' });
+  } catch (error) {
+    console.error('Configure alerts error:', error);
+    res.status(500).json({ error: 'Failed to configure alerts' });
+  }
+});
+
+router.post('/alerts/resolve/:ruleId', async (req, res) => {
+  try {
+    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const { ruleId } = req.params;
+    
+    proactiveAlerts.resolveAlert(ruleId);
+    res.json({ message: `Alert ${ruleId} resolved manually` });
+  } catch (error) {
+    console.error('Resolve alert error:', error);
+    res.status(500).json({ error: 'Failed to resolve alert' });
+  }
+});
+
 export { router as adminRoutes };

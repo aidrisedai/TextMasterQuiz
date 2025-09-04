@@ -23,7 +23,7 @@ export interface HealthCheck {
   issues: string[];
 }
 
-export class MonitoringService {
+class MonitoringService {
   private readonly HEALTH_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes
   private healthCheckTimer?: NodeJS.Timeout;
 
