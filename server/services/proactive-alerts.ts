@@ -31,7 +31,7 @@ export interface AlertInstance {
 export class ProactiveAlertService {
   private alertInstances = new Map<string, AlertInstance>();
   private config: AlertConfig = {
-    enabledChannels: ['sms'] // Default to SMS only since Twilio is already configured
+    enabledChannels: [] // SMS alerts disabled to avoid costs - user will login to check dashboard manually
   };
   
   private alertRules: AlertRule[] = [
