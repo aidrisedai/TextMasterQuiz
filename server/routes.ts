@@ -91,7 +91,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Initialize PROACTIVE ALERTS (prevent incidents like Aug 27 SMS outage)
   proactiveAlerts.init({
     adminPhoneNumber: '+15153570454', // Your phone number for critical SMS alerts
-    enabledChannels: ['sms'] // Start with SMS only, can add email/webhook later
+    enabledChannels: [] // SMS alerts disabled to avoid costs - user will login to check dashboard manually
   });
   
   // Start monitoring service
