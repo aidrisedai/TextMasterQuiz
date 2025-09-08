@@ -722,21 +722,67 @@ export class DatabaseStorage implements IStorage {
   }
 
   convertToUTC(localDateStr: string, timezone: string): Date {
-    // Reuse existing timezone conversion logic - this method already exists below
+    // PROPER timezone conversion - convert local time in user's timezone to UTC
     try {
+      // Parse the input date string "2025-09-08 21:00:00"
       const [datePart, timePart] = localDateStr.split(' ');
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hour, minute] = timePart.split(':').map(Number);
       
-      // Simple UTC conversion - create date with specified time in UTC
-      return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+      // Create ISO string in user's timezone
+      const isoString = `${datePart}T${timePart}`;
+      
+      // Method 1: Use temporal-polyfill approach (simple and reliable)
+      // Create date as if it's in the specified timezone, then adjust to UTC
+      const testDate = new Date(`${isoString}Z`); // Parse as UTC first
+      
+      // Get what this time would be in the user's timezone
+      const timeInUserZone = new Date(testDate.toLocaleString("en-US", { timeZone: timezone }));
+      const timeInUTC = new Date(testDate.toLocaleString("en-US", { timeZone: "UTC" }));
+      
+      // Calculate the offset difference
+      const offset = timeInUTC.getTime() - timeInUserZone.getTime();
+      
+      // Apply offset to get correct UTC time
+      const correctUTC = new Date(testDate.getTime() + offset);
+      
+      console.log(`🕘 Timezone conversion: ${localDateStr} ${timezone} → ${correctUTC.toISOString()}`);
+      return correctUTC;
+      
     } catch (error) {
       console.error(`Timezone conversion error for ${localDateStr} ${timezone}:`, error);
-      // Fallback: assume UTC
-      const [datePart, timePart] = localDateStr.split(' ');
-      const [year, month, day] = datePart.split('-').map(Number);
-      const [hour, minute] = timePart.split(':').map(Number);
-      return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+      
+      // Fallback: Use a simpler approach with manual offset calculation
+      try {
+        // For common US timezones, use known offsets (simplified)
+        const timezoneOffsets: { [key: string]: number } = {
+          'America/Los_Angeles': 8, // PST is UTC-8, PDT is UTC-7 (use average)
+          'America/Denver': 7,      // MST is UTC-7, MDT is UTC-6
+          'America/Chicago': 6,     // CST is UTC-6, CDT is UTC-5  
+          'America/New_York': 5,    // EST is UTC-5, EDT is UTC-4
+          'Europe/London': 0,       // GMT is UTC+0, BST is UTC+1
+          'UTC': 0
+        };
+        
+        const offsetHours = timezoneOffsets[timezone] || 0;
+        
+        const [datePart, timePart] = localDateStr.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute, second = 0] = timePart.split(':').map(Number);
+        
+        // Create UTC date with offset applied
+        const utcDate = new Date(Date.UTC(year, month - 1, day, hour + offsetHours, minute, second));
+        
+        console.log(`🕘 Fallback timezone conversion: ${localDateStr} ${timezone} → ${utcDate.toISOString()}`);
+        return utcDate;
+        
+      } catch (fallbackError) {
+        console.error('Fallback timezone conversion failed:', fallbackError);
+        
+        // Last resort: treat as UTC (old broken behavior)
+        const [datePart, timePart] = localDateStr.split(' ');
+        const [year, month, day] = datePart.split('-').map(Number);
+        const [hour, minute] = timePart.split(':').map(Number);
+        return new Date(Date.UTC(year, month - 1, day, hour, minute, 0));
+      }
     }
   }
 
