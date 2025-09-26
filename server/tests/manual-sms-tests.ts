@@ -1,9 +1,14 @@
 // Manual SMS Command Tests
 // Run these tests to verify SMS commands work with real Twilio integration
 
-import { twilioService } from '../services/twilio';
-import { storage } from '../storage';
-import { geminiService } from '../services/gemini';
+import { twilioService } from '../services/twilio.js';
+import { geminiService } from '../services/gemini.js';
+import { storage } from '../storage.js';
+
+// Utility function for error handling
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? getErrorMessage(error) : String(error);
+};
 
 const TEST_PHONE_NUMBER = '+15153570454'; // Replace with your test number
 
@@ -71,7 +76,7 @@ export class ManualSMSTests {
         command: 'Basic SMS',
         success: false,
         message: 'Error sending SMS',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -91,7 +96,7 @@ export class ManualSMSTests {
         command: 'HELP Command',
         success: false,
         message: 'Error sending help',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -118,7 +123,7 @@ export class ManualSMSTests {
         command: 'SCORE Command',
         success: false,
         message: 'Error sending stats',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -155,7 +160,7 @@ export class ManualSMSTests {
         command: 'Question Sending',
         success: false,
         message: 'Error sending question',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -200,7 +205,7 @@ export class ManualSMSTests {
         command: 'Answer Feedback',
         success: false,
         message: 'Error sending answer feedback',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -237,7 +242,7 @@ export class ManualSMSTests {
         command: 'STOP/RESTART Commands',
         success: false,
         message: 'Error sending stop/restart messages',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -273,7 +278,7 @@ export class ManualSMSTests {
         command: 'MORE Command',
         success: false,
         message: 'Error with MORE command',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }
@@ -313,7 +318,7 @@ export class ManualSMSTests {
         command: 'Webhook Simulation',
         success: false,
         message: 'Error in webhook simulation',
-        error: error.message
+        error: getErrorMessage(error)
       });
     }
   }

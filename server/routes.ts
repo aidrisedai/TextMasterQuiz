@@ -4,10 +4,7 @@ import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
-// import { schedulerService } from "./services/scheduler"; // OLD BROKEN SCHEDULER - DISABLED  
-import { queueScheduler } from "./services/queue-scheduler"; // OLD BATCH SCHEDULER (15-min intervals)
-import { precisionScheduler } from "./services/precision-scheduler"; // OLD PRECISION SCHEDULER (individual cron jobs)
-import { hourlyScheduler } from "./services/hourly-scheduler"; // NEW HOURLY SCHEDULER (23:30 + hourly)
+import { precisionScheduler } from "./services/precision-scheduler"; // PRIMARY SCHEDULER (precision timing + single-attempt)
 import { proactiveAlerts } from "./services/proactive-alerts"; // PROACTIVE ALERT SYSTEM
 import { adminRoutes } from "./routes-admin.js";
 import timezoneTestRoutes from "./routes-test-timezone";
@@ -85,8 +82,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize HOURLY scheduler (23:30 population + hourly delivery - scalable & simple)
-  hourlyScheduler.init();
+  // Initialize PRECISION scheduler (exact timing + single-attempt delivery)
+  precisionScheduler.init();
   
   // Initialize PROACTIVE ALERTS (prevent incidents like Aug 27 SMS outage)
   proactiveAlerts.init({
@@ -334,8 +331,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use queue scheduler to send question immediately
-      await queueScheduler.sendQuestionNow(phoneNumber);
+      // Use precision scheduler to send question immediately
+      await precisionScheduler.sendQuestionNow(phoneNumber);
       res.json({ message: "Question sent successfully" });
     } catch (error: any) {
       console.error("Send question error:", error);
@@ -429,8 +426,39 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   app.post("/api/auth/logout", (req, res) => {
-    req.session.adminUser = undefined;
+    if (req.session) {
+      req.session.adminUser = undefined;
+    }
     res.json({ message: "Logout successful" });
+  });
+
+  // Health check endpoint for Render
+  app.get("/api/health", async (req, res) => {
+    try {
+      // Basic health check
+      const health = {
+        status: "ok",
+        timestamp: new Date().toISOString(),
+        uptime: process.uptime(),
+        version: "1.0.0"
+      };
+      
+      // Optional: Add database check
+      try {
+        await storage.getAllUsers();
+        health.database = "connected";
+      } catch (error) {
+        health.database = "disconnected";
+      }
+      
+      res.json(health);
+    } catch (error) {
+      res.status(503).json({
+        status: "error",
+        timestamp: new Date().toISOString(),
+        error: "Health check failed"
+      });
+    }
   });
 
   // Admin middleware for protected routes

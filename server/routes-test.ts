@@ -1,7 +1,12 @@
 import { Router } from 'express';
-import { twilioService } from './services/twilio.js';
-import { storage } from './storage.js';
-import { geminiService } from './services/gemini.js';
+import { twilioService } from './services/twilio';
+import { geminiService } from './services/gemini';
+import { storage } from './storage';
+
+// Utility function for error handling
+const getErrorMessage = (error: unknown): string => {
+  return error instanceof Error ? error.message : String(error);
+};
 
 const router = Router();
 
@@ -21,7 +26,7 @@ router.post('/sms-commands', async (req, res) => {
       });
       results.push({ test: 'Basic SMS', success: basicResult });
     } catch (error) {
-      results.push({ test: 'Basic SMS', success: false, error: error.message });
+      results.push({ test: 'Basic SMS', success: false, error: getErrorMessage(error) });
     }
 
     // Test 2: HELP command
@@ -29,7 +34,7 @@ router.post('/sms-commands', async (req, res) => {
       const helpResult = await twilioService.sendHelp(phoneNumber);
       results.push({ test: 'HELP Command', success: helpResult });
     } catch (error) {
-      results.push({ test: 'HELP Command', success: false, error: error.message });
+      results.push({ test: 'HELP Command', success: false, error: getErrorMessage(error) });
     }
 
     // Test 3: SCORE command
@@ -43,7 +48,7 @@ router.post('/sms-commands', async (req, res) => {
       const scoreResult = await twilioService.sendStats(phoneNumber, mockStats);
       results.push({ test: 'SCORE Command', success: scoreResult });
     } catch (error) {
-      results.push({ test: 'SCORE Command', success: false, error: error.message });
+      results.push({ test: 'SCORE Command', success: false, error: getErrorMessage(error) });
     }
 
     // Test 4: Question sending
@@ -60,7 +65,7 @@ router.post('/sms-commands', async (req, res) => {
         results.push({ test: 'Question Sending', success: false, error: 'No questions available' });
       }
     } catch (error) {
-      results.push({ test: 'Question Sending', success: false, error: error.message });
+      results.push({ test: 'Question Sending', success: false, error: getErrorMessage(error) });
     }
 
     // Test 5: Answer feedback (correct)
@@ -75,7 +80,7 @@ router.post('/sms-commands', async (req, res) => {
       );
       results.push({ test: 'Answer Feedback (Correct)', success: correctFeedback });
     } catch (error) {
-      results.push({ test: 'Answer Feedback (Correct)', success: false, error: error.message });
+      results.push({ test: 'Answer Feedback (Correct)', success: false, error: getErrorMessage(error) });
     }
 
     // Test 6: Answer feedback (incorrect)
@@ -90,7 +95,7 @@ router.post('/sms-commands', async (req, res) => {
       );
       results.push({ test: 'Answer Feedback (Incorrect)', success: incorrectFeedback });
     } catch (error) {
-      results.push({ test: 'Answer Feedback (Incorrect)', success: false, error: error.message });
+      results.push({ test: 'Answer Feedback (Incorrect)', success: false, error: getErrorMessage(error) });
     }
 
     // Test 7: STOP/RESTART commands
@@ -107,7 +112,7 @@ router.post('/sms-commands', async (req, res) => {
       
       results.push({ test: 'STOP/RESTART Commands', success: stopResult && restartResult });
     } catch (error) {
-      results.push({ test: 'STOP/RESTART Commands', success: false, error: error.message });
+      results.push({ test: 'STOP/RESTART Commands', success: false, error: getErrorMessage(error) });
     }
 
     // Test 8: MORE command (premium feature)
@@ -124,7 +129,7 @@ router.post('/sms-commands', async (req, res) => {
         results.push({ test: 'MORE Command (Premium)', success: false, error: 'Failed to generate bonus question' });
       }
     } catch (error) {
-      results.push({ test: 'MORE Command (Premium)', success: false, error: error.message });
+      results.push({ test: 'MORE Command (Premium)', success: false, error: getErrorMessage(error) });
     }
 
     // Summary
@@ -175,7 +180,7 @@ router.post('/webhook-simulation', async (req, res) => {
         });
         results.push({ command: test.command, success: result });
       } catch (error) {
-        results.push({ command: test.command, success: false, error: error.message });
+        results.push({ command: test.command, success: false, error: getErrorMessage(error) });
       }
     }
 
@@ -222,7 +227,7 @@ router.post('/sms-simple', async (req, res) => {
     res.status(500).json({ 
       success: false, 
       error: 'Failed to test SMS delivery',
-      details: error.message 
+      details: getErrorMessage(error)
     });
   }
 });

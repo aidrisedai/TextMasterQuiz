@@ -315,3 +315,4 @@ export class PrecisionSchedulerService {
 }
 
 export const precisionScheduler = new PrecisionSchedulerService();
+export const precisionSchedulerService = precisionScheduler; // For backward compatibility

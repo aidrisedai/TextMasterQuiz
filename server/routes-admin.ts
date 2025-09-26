@@ -5,7 +5,6 @@ import { storage } from './storage.js';
 import { generateQuestionsForCategory } from './scripts/generate-questions.js';
 import { geminiService } from './services/gemini.js';
 import { broadcastService } from './services/broadcast.js';
-import { queueScheduler } from './services/queue-scheduler.js';
 import { insertGenerationJobSchema, insertBroadcastSchema } from '@shared/schema';
 import { z } from 'zod';
 import { generationManager } from './services/generation-manager.js';
@@ -163,8 +162,7 @@ router.post('/generate-single/:category', async (req, res) => {
         correctAnswer: question.correctAnswer,
         explanation: question.explanation,
         category: question.category,
-        difficultyLevel: question.difficultyLevel,
-        usageCount: 0
+        difficultyLevel: question.difficultyLevel
       });
       
       res.json({ 
@@ -197,7 +195,7 @@ router.get('/questions', async (req, res) => {
     const paginatedQuestions = filteredQuestions.slice(startIndex, endIndex);
     
     // Get category summary
-    const categoryStats = {};
+    const categoryStats: Record<string, number> = {};
     questions.forEach(q => {
       categoryStats[q.category] = (categoryStats[q.category] || 0) + 1;
     });
@@ -319,8 +317,8 @@ router.post('/manual-question-delivery', async (req, res) => {
     
     console.log(`🎯 Manual question delivery to ${phoneNumber}`);
     
-    // Import scheduler service dynamically
-    const { schedulerService } = await import('./services/scheduler.js');
+    // Import precision scheduler service dynamically
+    const { precisionSchedulerService } = await import('./services/precision-scheduler.js');
     
     // Get user and send question directly
     const user = await storage.getUserByPhoneNumber(phoneNumber);
@@ -328,8 +326,8 @@ router.post('/manual-question-delivery', async (req, res) => {
       return res.status(404).json({ error: 'User not found' });
     }
     
-    // Send question directly using scheduler
-    await schedulerService.sendQuestionToUser(user);
+    // Send question now using precision scheduler
+    await precisionSchedulerService.sendQuestionNow(user.phoneNumber);
     
     res.json({ 
       message: 'Question sent successfully',
@@ -340,8 +338,8 @@ router.post('/manual-question-delivery', async (req, res) => {
     });
     
   } catch (error) {
-    console.error('Manual delivery error:', error);
-    res.status(500).json({ error: error.message || 'Failed to send question manually' });
+    console.error('Manual question sending error:', error);
+    res.status(500).json({ error: error instanceof Error ? error.message : 'Failed to send question manually' });
   }
 });
 
@@ -936,7 +934,7 @@ router.post('/trigger-queue', async (req, res) => {
 // Proactive Alerts Management
 router.get('/alerts/active', async (req, res) => {
   try {
-    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const { proactiveAlerts } = await import('./services/proactive-alerts.js');
     const activeAlerts = proactiveAlerts.getActiveAlerts();
     res.json({ activeAlerts });
   } catch (error) {
@@ -947,7 +945,7 @@ router.get('/alerts/active', async (req, res) => {
 
 router.post('/alerts/configure', async (req, res) => {
   try {
-    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const { proactiveAlerts } = await import('./services/proactive-alerts.js');
     const { adminPhoneNumber, adminEmail, webhookUrl, enabledChannels } = req.body;
     
     proactiveAlerts.updateConfig({
@@ -966,7 +964,7 @@ router.post('/alerts/configure', async (req, res) => {
 
 router.post('/alerts/resolve/:ruleId', async (req, res) => {
   try {
-    const { proactiveAlerts } = await import('../services/proactive-alerts.js');
+    const { proactiveAlerts } = await import('./services/proactive-alerts.js');
     const { ruleId } = req.params;
     
     proactiveAlerts.resolveAlert(ruleId);

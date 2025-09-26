@@ -48,8 +48,7 @@ async function generateQuestionsForCategory(category: string, count: number = 20
           correctAnswer: question.correctAnswer,
           explanation: question.explanation,
           category: question.category,
-          difficultyLevel: question.difficultyLevel,
-          timesUsed: 0
+          difficultyLevel: question.difficultyLevel
         });
         
         categoryQuestions.push(question.questionText);

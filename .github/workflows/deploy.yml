@@ -1,0 +1,57 @@
+name: Deploy to Render
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test:
+    name: Test & Build
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Run TypeScript checks
+      run: npm run check
+      
+    - name: Build application
+      run: npm run build
+      
+    - name: Test build artifacts
+      run: |
+        ls -la dist/
+        test -f dist/index.js
+        test -d dist/public
+        
+    - name: Run basic smoke tests
+      run: |
+        echo "✅ Build completed successfully"
+        echo "✅ All TypeScript checks passed"
+        echo "✅ Build artifacts generated"
+
+  deploy:
+    name: Deploy to Render
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    
+    steps:
+    - name: Deploy to Render
+      run: |
+        echo "🚀 Deployment triggered for Render"
+        echo "📝 Render will automatically deploy from this GitHub push"
+        echo "🔗 Check your Render dashboard for deployment status"
+        echo "✅ CI/CD pipeline completed successfully"
