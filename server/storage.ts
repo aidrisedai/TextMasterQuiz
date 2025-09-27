@@ -853,6 +853,10 @@ export class DatabaseStorage implements IStorage {
           const result = await client.query('SELECT 1 as test, NOW() as timestamp');
           console.log('✅ Database connection test passed');
           console.log(`🕰️ Database time: ${result.rows[0].timestamp}`);
+          
+          // Check if schema exists and initialize if needed
+          await this.ensureSchemaExists(client);
+          
           return; // Success, exit the function
         } finally {
           client.release(); // Always release the client back to the pool
@@ -874,6 +878,51 @@ export class DatabaseStorage implements IStorage {
         await new Promise(resolve => setTimeout(resolve, delay));
         delay *= 1.5; // Exponential backoff
       }
+    }
+  }
+
+  async ensureSchemaExists(client: any): Promise<void> {
+    try {
+      console.log('🔍 Checking if database schema exists...');
+      
+      // Check if admin_users table exists (one of the core tables)
+      const result = await client.query(`
+        SELECT EXISTS (
+          SELECT FROM information_schema.tables 
+          WHERE table_schema = 'public' 
+          AND table_name = 'admin_users'
+        );
+      `);
+      
+      const schemaExists = result.rows[0].exists;
+      
+      if (!schemaExists) {
+        console.log('⚠️  Database schema not found. Initializing schema...');
+        
+        try {
+          // Use drizzle-kit to push schema
+          const { execSync } = await import('child_process');
+          
+          console.log('📋 Running drizzle-kit push...');
+          execSync('npx drizzle-kit push --force', { 
+            stdio: 'inherit',
+            cwd: process.cwd(),
+            env: { ...process.env }
+          });
+          
+          console.log('✅ Database schema initialized successfully!');
+          
+        } catch (error) {
+          console.error('❌ Failed to initialize database schema:', error);
+          throw new Error('Database schema initialization failed. Please run "npm run db:push" manually.');
+        }
+      } else {
+        console.log('✅ Database schema exists');
+      }
+      
+    } catch (error) {
+      console.error('❌ Error checking database schema:', error);
+      // Don't throw here - let the app continue and fail gracefully if tables don't exist
     }
   }
 }
