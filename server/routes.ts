@@ -7,11 +7,12 @@ import { geminiService } from "./services/gemini";
 import { precisionScheduler } from "./services/precision-scheduler"; // PRIMARY SCHEDULER (precision timing + single-attempt)
 import { proactiveAlerts } from "./services/proactive-alerts"; // PROACTIVE ALERT SYSTEM
 import { adminRoutes } from "./routes-admin.js";
-import timezoneTestRoutes from "./routes-test-timezone";
-import simpleTestRoutes from "./routes-test-simple";
-import testRunnerRoutes from "./routes-test-runner";
-import finalTestRoutes from "./routes-test-final";
-import scoreTestRoutes from "./routes-test-score";
+// Test routes only loaded in development/test environments
+let timezoneTestRoutes: any = null;
+let simpleTestRoutes: any = null;
+let testRunnerRoutes: any = null;
+let finalTestRoutes: any = null;
+let scoreTestRoutes: any = null;
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
 import session from "express-session";
@@ -69,6 +70,15 @@ async function ensureDefaultAdmin() {
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Load test routes only in non-production environments
+  if (process.env.NODE_ENV !== 'production') {
+    timezoneTestRoutes = (await import("./routes-test-timezone")).default;
+    simpleTestRoutes = (await import("./routes-test-simple")).default;
+    testRunnerRoutes = (await import("./routes-test-runner")).default;
+    finalTestRoutes = (await import("./routes-test-final")).default;
+    scoreTestRoutes = (await import("./routes-test-score")).default;
+  }
+
   // Setup session middleware (no Google OAuth)
   app.use(session({
     secret: process.env.SESSION_SECRET || 'your-session-secret',
@@ -550,16 +560,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Admin routes for question management
   app.use("/api/admin", requireAdmin, adminRoutes);
   
-  // Test routes for SMS commands
-  const testRoutes = await import('./routes-test.js');
-  app.use("/api/test", testRoutes.default);
-  
-  // Timezone testing routes
-  app.use("/api/test", timezoneTestRoutes);
-  app.use("/api/test", simpleTestRoutes);
-  app.use("/api/test", testRunnerRoutes);
-  app.use("/api/test", finalTestRoutes);
-  app.use("/api/test", scoreTestRoutes);
+  // Test routes only in development/test environments
+  if (process.env.NODE_ENV !== 'production') {
+    // Test routes for SMS commands
+    const testRoutes = await import('./routes-test.js');
+    app.use("/api/test", testRoutes.default);
+    
+    // Timezone testing routes
+    if (timezoneTestRoutes) app.use("/api/test", timezoneTestRoutes);
+    if (simpleTestRoutes) app.use("/api/test", simpleTestRoutes);
+    if (testRunnerRoutes) app.use("/api/test", testRunnerRoutes);
+    if (finalTestRoutes) app.use("/api/test", finalTestRoutes);
+    if (scoreTestRoutes) app.use("/api/test", scoreTestRoutes);
+  }
 
   // Helper function to send welcome quiz question immediately after signup
   async function sendWelcomeQuizQuestion(user: any) {
