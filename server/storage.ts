@@ -840,14 +840,31 @@ export class DatabaseStorage implements IStorage {
       .orderBy(deliveryQueue.scheduledFor);
   }
 
-  async testConnection(): Promise<void> {
-    try {
-      // Simple test query to check database connectivity
-      await db.execute(sql`SELECT 1`);
-      console.log('✅ Database connection test passed');
-    } catch (error) {
-      console.error('❌ Database connection test failed:', error);
-      throw error;
+  async testConnection(retries = 3, delay = 2000): Promise<void> {
+    for (let attempt = 1; attempt <= retries; attempt++) {
+      try {
+        console.log(`🔍 Database connection attempt ${attempt}/${retries}...`);
+        
+        // Simple test query to check database connectivity
+        await db.execute(sql`SELECT 1`);
+        console.log('✅ Database connection test passed');
+        return; // Success, exit the function
+        
+      } catch (error) {
+        console.error(`❌ Database connection attempt ${attempt} failed:`, error instanceof Error ? error.message : error);
+        
+        if (attempt === retries) {
+          console.error('❌ All database connection attempts failed');
+          console.error('💡 Please check your DATABASE_URL format:');
+          console.error('💡 Should be: postgresql://user:pass@host:port/database');
+          console.error('💡 Make sure you\'re using the INTERNAL database URL from Render');
+          throw error;
+        }
+        
+        console.log(`⏱️  Waiting ${delay}ms before retry...`);
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay *= 1.5; // Exponential backoff
+      }
     }
   }
 }
