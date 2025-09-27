@@ -845,10 +845,18 @@ export class DatabaseStorage implements IStorage {
       try {
         console.log(`🔍 Database connection attempt ${attempt}/${retries}...`);
         
-        // Simple test query to check database connectivity
-        await db.execute(sql`SELECT 1`);
-        console.log('✅ Database connection test passed');
-        return; // Success, exit the function
+        // Test both pool connection and simple query
+        const { pool } = await import('./db.js');
+        const client = await pool.connect();
+        
+        try {
+          const result = await client.query('SELECT 1 as test, NOW() as timestamp');
+          console.log('✅ Database connection test passed');
+          console.log(`🕰️ Database time: ${result.rows[0].timestamp}`);
+          return; // Success, exit the function
+        } finally {
+          client.release(); // Always release the client back to the pool
+        }
         
       } catch (error) {
         console.error(`❌ Database connection attempt ${attempt} failed:`, error instanceof Error ? error.message : error);
@@ -858,6 +866,7 @@ export class DatabaseStorage implements IStorage {
           console.error('💡 Please check your DATABASE_URL format:');
           console.error('💡 Should be: postgresql://user:pass@host:port/database');
           console.error('💡 Make sure you\'re using the INTERNAL database URL from Render');
+          console.error('💡 Verify SSL configuration and network connectivity');
           throw error;
         }
         
