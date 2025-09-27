@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { twilioService } from "./services/twilio";
 import { openaiService } from "./services/openai";
 import { geminiService } from "./services/gemini";
-import { precisionScheduler } from "./services/precision-scheduler"; // PRIMARY SCHEDULER (precision timing + single-attempt)
+import { databaseDeliveryService } from "./services/database-delivery-service"; // DATABASE-DRIVEN DELIVERY (polling every 15 minutes)
 import { proactiveAlerts } from "./services/proactive-alerts"; // PROACTIVE ALERT SYSTEM
 import { adminRoutes } from "./routes-admin.js";
 // Test routes only loaded in development/test environments
@@ -92,8 +92,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   }));
   
-  // Initialize PRECISION scheduler (exact timing + single-attempt delivery)
-  precisionScheduler.init();
+  // Initialize DATABASE-DRIVEN delivery service (polling every 15 minutes + all existing safeguards)
+  databaseDeliveryService.init();
   
   // Initialize PROACTIVE ALERTS (prevent incidents like Aug 27 SMS outage)
   proactiveAlerts.init({
