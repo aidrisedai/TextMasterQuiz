@@ -72,6 +72,9 @@ export interface IStorage {
   getUserAnsweredQuestionIds(userId: number): Promise<number[]>;
   clearPendingDeliveriesForDate(date: Date): Promise<void>;
   getDeliveriesForHour(hour: number): Promise<DeliveryQueue[]>;
+  
+  // Connection testing
+  testConnection(): Promise<void>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -835,6 +838,17 @@ export class DatabaseStorage implements IStorage {
         eq(deliveryQueue.attempts, 0) // Single attempt
       ))
       .orderBy(deliveryQueue.scheduledFor);
+  }
+
+  async testConnection(): Promise<void> {
+    try {
+      // Simple test query to check database connectivity
+      await db.execute(sql`SELECT 1`);
+      console.log('✅ Database connection test passed');
+    } catch (error) {
+      console.error('❌ Database connection test failed:', error);
+      throw error;
+    }
   }
 }
 
