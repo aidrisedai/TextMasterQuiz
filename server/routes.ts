@@ -342,8 +342,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Use precision scheduler to send question immediately
-      await precisionScheduler.sendQuestionNow(phoneNumber);
+      // Send question immediately using same logic as welcome questions
+      await sendWelcomeQuizQuestion(user);
       res.json({ message: "Question sent successfully" });
     } catch (error: any) {
       console.error("Send question error:", error);
@@ -447,7 +447,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/health", async (req, res) => {
     try {
       // Basic health check
-      const health = {
+      const health: any = {
         status: "ok",
         timestamp: new Date().toISOString(),
         uptime: process.uptime(),
@@ -678,11 +678,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate the answer against the correct answer
       const isCorrect = question.correctAnswer.toUpperCase() === answer.toUpperCase();
       
-      // Calculate points with progressive streak bonus
+      // Calculate points with dual streak bonus system
       const currentStats = await storage.getUserStats(user.id);
-      const pointsEarned = calculatePoints(isCorrect, currentStats.currentStreak);
+      const pointsEarned = calculatePoints(isCorrect, currentStats.winningStreak, currentStats.playStreak);
       
       console.log(`✅ Answer validation: User answered "${answer}", correct answer is "${question.correctAnswer}", isCorrect: ${isCorrect}`);
+      console.log(`📈 Current streaks: Play=${currentStats.playStreak}, Winning=${currentStats.winningStreak}`);
       
       // Update the existing pending answer record
       await storage.updateAnswer(lastAnswer.id, {
@@ -691,11 +692,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         pointsEarned,
       });
 
-      // Get updated stats
+      // Get updated stats (after the streak updates in storage)
       const stats = await storage.getUserStats(user.id);
       
-      // Get the enhanced scoring message with breakdown
-      const scoreBreakdown = getPointsBreakdown(isCorrect, stats.currentStreak);
+      // Get the enhanced scoring message with breakdown using dual streaks
+      const scoreBreakdown = getPointsBreakdown(isCorrect, stats.winningStreak, stats.playStreak);
 
       // Send feedback with actual question data and enhanced scoring
       await twilioService.sendAnswerFeedback(
@@ -703,7 +704,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isCorrect,
         question.correctAnswer,
         question.explanation,
-        stats.currentStreak,
+        stats.winningStreak, // Use winning streak for traditional streak messaging
         pointsEarned,
         scoreBreakdown.message
       );

@@ -2,19 +2,20 @@
 
 function calculatePoints(isCorrect, currentStreak) {
   if (!isCorrect) {
-    return 0;
+    return 10; // Always get 10 points for trying, even when wrong
   }
 
-  const basePoints = 10;
+  const basePoints = 100; // Increased base points for correct answers
   let streakBonus = 0;
 
   // Progressive streak bonus system:
-  // 1-2 days: No bonus (10 points)
-  // 3-6 days: +2 bonus per day (12, 14, 16, 18)
-  // 7-13 days: +3 bonus per day (21, 24, 27, 30, 33, 36, 39)
-  // 14-20 days: +4 bonus per day (43, 47, 51, 55, 59, 63, 67)
-  // 21-29 days: +5 bonus per day (72, 77, 82, 87, 92, 97, 102, 107, 112)
-  // 30+ days: +7 bonus per day (119, 126, 133, ...)
+  // Wrong answers: 10 points (no streak bonus)
+  // 1-2 days: No bonus (100 points)
+  // 3-6 days: +2 bonus per day (102, 104, 106, 108)
+  // 7-13 days: +3 bonus per day (111, 114, 117, 120, 123, 126, 129)
+  // 14-20 days: +4 bonus per day (133, 137, 141, 145, 149, 153, 157)
+  // 21-29 days: +5 bonus per day (162, 167, 172, 177, 182, 187, 192, 197, 202)
+  // 30+ days: +7 bonus per day (209, 216, 223, ...)
 
   if (currentStreak >= 3 && currentStreak <= 6) {
     // Days 3-6: +2 bonus per day
@@ -56,15 +57,15 @@ function getStreakBonusMessage(streak) {
 function getPointsBreakdown(isCorrect, currentStreak) {
   if (!isCorrect) {
     return {
-      totalPoints: 0,
-      basePoints: 0,
+      totalPoints: 10,
+      basePoints: 10,
       streakBonus: 0,
-      message: ""
+      message: `Score: +10 points for trying! 💪`
     };
   }
 
   const totalPoints = calculatePoints(isCorrect, currentStreak);
-  const basePoints = 10;
+  const basePoints = 100;
   const streakBonus = totalPoints - basePoints;
   const bonusMessage = getStreakBonusMessage(currentStreak);
 
@@ -119,8 +120,9 @@ console.log(`Incorrect answer (10-day streak): ${wrongAnswer.totalPoints} points
 console.log(`Message: "${wrongAnswer.message}"`);
 
 console.log('\n✅ Progressive Scoring System is working correctly!');
-console.log('\n🎉 Key Benefits:');
+console.log('🎉 Key Benefits:');
 console.log('- Motivates longer streaks with increasing rewards');
-console.log('- Base 10 points ensures fairness for new users');
+console.log('- 10 points for wrong answers encourages participation');
+console.log('- 100 base points for correct answers with streak bonuses');
 console.log('- Exponential growth rewards dedicated users');
 console.log('- Encouraging messages build engagement');

@@ -175,19 +175,30 @@ export class DatabaseStorage implements IStorage {
         const newCorrectAnswers = user.correctAnswers + (insertAnswer.isCorrect ? 1 : 0);
         const newTotalScore = user.totalScore + (insertAnswer.pointsEarned || 0);
         
-        // Calculate streak
-        let newStreak = user.currentStreak;
+        // Calculate dual streaks
+        let newCurrentStreak = user.currentStreak; // Legacy - keep for compatibility
+        let newPlayStreak = user.playStreak || user.currentStreak; // Migrate from currentStreak if needed
+        let newWinningStreak = user.winningStreak || 0;
+        
+        // Play streak always increments when playing (regardless of correctness)
+        newPlayStreak += 1;
+        
+        // Winning streak only increments on correct answers, resets on wrong answers
         if (insertAnswer.isCorrect) {
-          newStreak += 1;
+          newWinningStreak += 1;
+          newCurrentStreak += 1; // Legacy compatibility
         } else {
-          newStreak = 0;
+          newWinningStreak = 0;
+          newCurrentStreak = 0; // Legacy compatibility
         }
         
         await this.updateUser(insertAnswer.userId, {
           questionsAnswered: newQuestionsAnswered,
           correctAnswers: newCorrectAnswers,
           totalScore: newTotalScore,
-          currentStreak: newStreak,
+          currentStreak: newCurrentStreak, // Legacy
+          playStreak: newPlayStreak,
+          winningStreak: newWinningStreak,
           lastQuizDate: new Date(),
           lastAnswer: insertAnswer.userAnswer,
         });
@@ -212,19 +223,30 @@ export class DatabaseStorage implements IStorage {
         const newCorrectAnswers = user.correctAnswers + (answer.isCorrect ? 1 : 0);
         const newTotalScore = user.totalScore + (answer.pointsEarned || 0);
         
-        // Calculate streak
-        let newStreak = user.currentStreak;
+        // Calculate dual streaks
+        let newCurrentStreak = user.currentStreak; // Legacy - keep for compatibility
+        let newPlayStreak = user.playStreak || user.currentStreak; // Migrate from currentStreak if needed
+        let newWinningStreak = user.winningStreak || 0;
+        
+        // Play streak always increments when playing (regardless of correctness)
+        newPlayStreak += 1;
+        
+        // Winning streak only increments on correct answers, resets on wrong answers
         if (answer.isCorrect) {
-          newStreak += 1;
+          newWinningStreak += 1;
+          newCurrentStreak += 1; // Legacy compatibility
         } else {
-          newStreak = 0;
+          newWinningStreak = 0;
+          newCurrentStreak = 0; // Legacy compatibility
         }
         
         await this.updateUser(answer.userId, {
           questionsAnswered: newQuestionsAnswered,
           correctAnswers: newCorrectAnswers,
           totalScore: newTotalScore,
-          currentStreak: newStreak,
+          currentStreak: newCurrentStreak, // Legacy
+          playStreak: newPlayStreak,
+          winningStreak: newWinningStreak,
           lastQuizDate: new Date(),
           lastAnswer: answer.userAnswer,
         });
@@ -257,6 +279,8 @@ export class DatabaseStorage implements IStorage {
 
   async getUserStats(userId: number): Promise<{
     currentStreak: number;
+    playStreak: number;
+    winningStreak: number;
     totalScore: number;
     questionsAnswered: number;
     accuracyRate: number;
@@ -265,6 +289,8 @@ export class DatabaseStorage implements IStorage {
     if (!user) {
       return {
         currentStreak: 0,
+        playStreak: 0,
+        winningStreak: 0,
         totalScore: 0,
         questionsAnswered: 0,
         accuracyRate: 0,
@@ -276,7 +302,9 @@ export class DatabaseStorage implements IStorage {
       : 0;
     
     return {
-      currentStreak: user.currentStreak,
+      currentStreak: user.currentStreak, // Legacy
+      playStreak: user.playStreak || user.currentStreak || 0,
+      winningStreak: user.winningStreak || 0,
       totalScore: user.totalScore,
       questionsAnswered: user.questionsAnswered,
       accuracyRate,

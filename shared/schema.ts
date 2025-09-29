@@ -8,7 +8,9 @@ export const users = pgTable("users", {
   phoneNumber: text("phone_number").notNull().unique(),
   categoryPreferences: text("category_preferences").array().default([]),
   preferredTime: text("preferred_time").notNull().default("09:00"),
-  currentStreak: integer("current_streak").notNull().default(0),
+  currentStreak: integer("current_streak").notNull().default(0), // Legacy - will be replaced by playStreak
+  playStreak: integer("play_streak").notNull().default(0), // Continues as long as you play daily
+  winningStreak: integer("winning_streak").notNull().default(0), // Resets on wrong answer
   totalScore: integer("total_score").notNull().default(0),
   lastQuizDate: timestamp("last_quiz_date"),
   lastAnswer: text("last_answer"),

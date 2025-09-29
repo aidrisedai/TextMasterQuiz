@@ -1,33 +1,50 @@
-import { calculatePoints, getPointsBreakdown, getStreakPreview } from '../server/utils/scoring.js';
+import { calculatePoints, getPointsBreakdown, getWinningStreakPreview, getPlayStreakMessage, getWinningStreakMessage } from '../server/utils/scoring.js';
 
-console.log('🎯 Progressive Streak Bonus System Test');
-console.log('=======================================\n');
+console.log('🎯 Dual Streak Bonus System Test');
+console.log('=================================\n');
 
-console.log('📊 Points Preview at Key Streak Milestones:');
-console.log('============================================');
+console.log('📊 Winning Streak Points Preview:');
+console.log('=================================');
 
-const preview = getStreakPreview();
-preview.forEach(({ streak, points }) => {
-    console.log(`Day ${streak.toString().padStart(3)}: ${points.toString().padStart(3)} points`);
+const preview = getWinningStreakPreview();
+preview.forEach(({ winningStreak, points }) => {
+    console.log(`Win ${winningStreak.toString().padStart(3)}: ${points.toString().padStart(3)} points`);
 });
 
-console.log('\n🔥 Scoring Breakdown Examples:');
-console.log('==============================');
+console.log('\n🔥 Dual Streak Scoring Examples:');
+console.log('=================================');
 
-const testStreaks = [1, 3, 7, 14, 21, 30, 50, 100];
+const testStreaks = [1, 3, 7, 14, 21, 30, 50];
 
-testStreaks.forEach(streak => {
-    const breakdown = getPointsBreakdown(true, streak);
-    console.log(`\nStreak ${streak}:`);
+testStreaks.forEach(winningStreak => {
+    const playStreak = winningStreak + 2; // Play streak is typically higher
+    const breakdown = getPointsBreakdown(true, winningStreak, playStreak);
+    console.log(`\nWinning Streak ${winningStreak}, Play Streak ${playStreak}:`);
     console.log(`- Total Points: ${breakdown.totalPoints}`);
-    console.log(`- Base: ${breakdown.basePoints}, Bonus: ${breakdown.streakBonus}`);
-    console.log(`- Message: "${breakdown.message}"`);
+    console.log(`- Base: ${breakdown.basePoints}, Winning Bonus: ${breakdown.streakBonus}`);
+    console.log(`- Message: "${breakdown.message.replace(/\n/g, ' | ')}"`);
 });
 
-console.log('\n❌ Incorrect Answer Test:');
-console.log('=========================');
-const wrongAnswer = getPointsBreakdown(false, 10);
-console.log(`Incorrect answer (10-day streak): ${wrongAnswer.totalPoints} points`);
-console.log(`Message: "${wrongAnswer.message}"`);
+console.log('\n❌ Wrong Answer with High Play Streak:');
+console.log('=======================================');
+const playStreak = 15;
+const winningStreak = 10;
+const wrongAnswer = getPointsBreakdown(false, winningStreak, playStreak);
+console.log(`Wrong answer (winning streak ${winningStreak}, play streak ${playStreak}): ${wrongAnswer.totalPoints} points`);
+console.log(`Message: "${wrongAnswer.message.replace(/\n/g, ' | ')}"`);
 
-console.log('\n✅ Progressive Scoring System is working correctly!');
+console.log('\n🎯 Play Streak Messages:');
+console.log('========================');
+[3, 7, 14, 21, 30].forEach(playStreak => {
+    const message = getPlayStreakMessage(playStreak);
+    console.log(`Play ${playStreak}: ${message || 'No message'}`);
+});
+
+console.log('\n🔥 Winning Streak Messages:');
+console.log('===========================');
+[3, 7, 14, 21, 30].forEach(winningStreak => {
+    const message = getWinningStreakMessage(winningStreak);
+    console.log(`Win ${winningStreak}: ${message || 'No message'}`);
+});
+
+console.log('\n✅ Dual Streak System is working correctly!');
