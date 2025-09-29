@@ -131,6 +131,7 @@ Reply with A, B, C, or D`;
     explanation: string,
     streak: number,
     points: number,
+    scoreMessage?: string,
   ): Promise<boolean> {
     const emoji = isCorrect ? "🎉" : "❌";
     const result = isCorrect
@@ -142,7 +143,7 @@ Reply with A, B, C, or D`;
 ${explanation}
 
 Streak: ${streak} days ${streak > 0 ? "🔥" : ""}
-Score: +${points} points
+${scoreMessage || `Score: +${points} points`}
 
 Text "SCORE" for stats or "HELP" for commands`;
 

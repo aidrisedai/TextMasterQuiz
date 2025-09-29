@@ -15,6 +15,7 @@ let finalTestRoutes: any = null;
 let scoreTestRoutes: any = null;
 import { insertUserSchema } from "@shared/schema";
 import { z } from "zod";
+import { calculatePoints, getPointsBreakdown } from "./utils/scoring.js";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
@@ -676,7 +677,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Validate the answer against the correct answer
       const isCorrect = question.correctAnswer.toUpperCase() === answer.toUpperCase();
-      const pointsEarned = isCorrect ? 10 : 0;
+      
+      // Calculate points with progressive streak bonus
+      const currentStats = await storage.getUserStats(user.id);
+      const pointsEarned = calculatePoints(isCorrect, currentStats.currentStreak);
       
       console.log(`✅ Answer validation: User answered "${answer}", correct answer is "${question.correctAnswer}", isCorrect: ${isCorrect}`);
       
@@ -689,15 +693,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Get updated stats
       const stats = await storage.getUserStats(user.id);
+      
+      // Get the enhanced scoring message with breakdown
+      const scoreBreakdown = getPointsBreakdown(isCorrect, stats.currentStreak);
 
-      // Send feedback with actual question data
+      // Send feedback with actual question data and enhanced scoring
       await twilioService.sendAnswerFeedback(
         phoneNumber,
         isCorrect,
         question.correctAnswer,
         question.explanation,
         stats.currentStreak,
-        pointsEarned
+        pointsEarned,
+        scoreBreakdown.message
       );
       
       console.log(`📤 Sent feedback to ${user.phoneNumber}: ${isCorrect ? 'Correct' : 'Incorrect'}`);
