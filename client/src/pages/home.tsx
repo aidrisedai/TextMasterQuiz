@@ -14,15 +14,41 @@ import {
   HelpCircle,
   StopCircle,
   MoreHorizontal,
+  Share2,
 } from "lucide-react";
+import { useToast } from "../hooks/use-toast";
 
 export default function Home() {
   const [showSignup, setShowSignup] = useState(false);
+  const { toast } = useToast();
 
   const scrollToSignup = () => {
     const signupSection = document.getElementById("signup");
     if (signupSection) {
       signupSection.scrollIntoView({ behavior: "smooth" });
+    }
+  };
+
+  const handleShare = async () => {
+    try {
+      const url = window.location.href;
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link copied!",
+        description: "Share this link with friends to get them started with Text4Quiz.",
+      });
+    } catch (error) {
+      // Fallback for browsers that don't support clipboard API
+      const textArea = document.createElement("textarea");
+      textArea.value = window.location.href;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand("copy");
+      document.body.removeChild(textArea);
+      toast({
+        title: "Link copied!",
+        description: "Share this link with friends to get them started with Text4Quiz.",
+      });
     }
   };
 
@@ -38,7 +64,7 @@ export default function Home() {
               </div>
               <h1 className="text-xl font-bold text-foreground">Text4Quiz</h1>
             </div>
-            <nav className="hidden md:flex space-x-6">
+            <nav className="hidden md:flex space-x-6 items-center">
               <a
                 href="#features"
                 className="text-muted-foreground hover:text-primary transition-colors"
@@ -75,6 +101,15 @@ export default function Home() {
               >
                 Demo
               </a>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleShare}
+                className="text-muted-foreground hover:text-primary"
+              >
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
+              </Button>
             </nav>
             
             {/* Mobile Navigation */}
@@ -82,10 +117,11 @@ export default function Home() {
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={scrollToSignup}
+                onClick={handleShare}
                 className="min-h-[44px]"
               >
-                Get Started
+                <Share2 className="mr-2 h-4 w-4" />
+                Share
               </Button>
             </div>
           </div>
