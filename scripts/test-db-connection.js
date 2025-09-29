@@ -1,36 +1,94 @@
-#!/usr/bin/env node
+import pkg from 'pg';
+const { Client } = pkg;
 
-// Simple database connection test
-console.log('🔍 Testing database connection...');
+async function testDatabaseConnection() {
+    console.log('🔧 Database Connection Diagnostic Tool');
+    console.log('=====================================\n');
 
-if (!process.env.DATABASE_URL) {
-  console.error('❌ DATABASE_URL environment variable is required');
-  process.exit(1);
+    // Test different connection configurations
+    const configs = [
+        {
+            name: 'Original Render URL',
+            connectionString: 'postgresql://textmasterquiz_user:yz6K26INTbEa46BvLFm8OcvewUxUufcD@dpg-d3blf5a4d50c73btdm00-a.oregon-postgres.render.com/textmasterquiz?sslmode=require',
+            ssl: { rejectUnauthorized: false }
+        },
+        {
+            name: 'Without SSL mode parameter',
+            connectionString: 'postgresql://textmasterquiz_user:yz6K26INTbEa46BvLFm8OcvewUxUufcD@dpg-d3blf5a4d50c73btdm00-a.oregon-postgres.render.com/textmasterquiz',
+            ssl: { rejectUnauthorized: false }
+        },
+        {
+            name: 'With different SSL config',
+            connectionString: 'postgresql://textmasterquiz_user:yz6K26INTbEa46BvLFm8OcvewUxUufcD@dpg-d3blf5a4d50c73btdm00-a.oregon-postgres.render.com/textmasterquiz',
+            ssl: true
+        },
+        {
+            name: 'Without SSL',
+            connectionString: 'postgresql://textmasterquiz_user:yz6K26INTbEa46BvLFm8OcvewUxUufcD@dpg-d3blf5a4d50c73btdm00-a.oregon-postgres.render.com/textmasterquiz',
+            ssl: false
+        }
+    ];
+
+    for (let i = 0; i < configs.length; i++) {
+        const config = configs[i];
+        console.log(`${i + 1}. Testing: ${config.name}`);
+        
+        const client = new Client({
+            connectionString: config.connectionString,
+            ssl: config.ssl,
+            connectionTimeoutMillis: 10000, // 10 second timeout
+        });
+
+        try {
+            console.log('   🔌 Attempting connection...');
+            await client.connect();
+            console.log('   ✅ Connection successful!');
+            
+            // Test a simple query
+            const result = await client.query('SELECT COUNT(*) as total_questions FROM questions');
+            console.log(`   📊 Total questions in database: ${result.rows[0].total_questions}`);
+            
+            // Test music/movies counts
+            const counts = await client.query(`
+                SELECT category, COUNT(*) as count 
+                FROM questions 
+                WHERE category IN ('music', 'movies') 
+                GROUP BY category 
+                ORDER BY category
+            `);
+            
+            console.log('   📋 Current music/movies counts:');
+            counts.rows.forEach(row => {
+                console.log(`      ${row.category}: ${row.count} questions`);
+            });
+            
+            await client.end();
+            console.log('   ✅ This configuration works!\n');
+            
+            // Save working config for later use
+            const workingConfig = {
+                connectionString: config.connectionString,
+                ssl: config.ssl
+            };
+            
+            console.log('🎯 WORKING CONFIGURATION FOUND:');
+            console.log(JSON.stringify(workingConfig, null, 2));
+            return workingConfig;
+            
+        } catch (error) {
+            console.log(`   ❌ Failed: ${error.message}`);
+            try {
+                await client.end();
+            } catch (e) {
+                // Ignore cleanup errors
+            }
+        }
+        
+        console.log('');
+    }
+    
+    console.log('❌ All connection attempts failed');
+    return null;
 }
 
-console.log('✅ DATABASE_URL found');
-console.log('🔗 Database URL:', process.env.DATABASE_URL.replace(/:[^:@]*@/, ':***@'));
-
-try {
-  // Import and test database connection
-  const { neon } = await import('@neondatabase/serverless');
-  
-  const sql = neon(process.env.DATABASE_URL);
-  
-  console.log('⏱️  Testing connection...');
-  const result = await sql`SELECT 1 as test`;
-  
-  if (result && result[0] && result[0].test === 1) {
-    console.log('✅ Database connection successful!');
-    console.log('🎉 Your DATABASE_URL is working correctly');
-  } else {
-    console.log('❌ Database connection returned unexpected result:', result);
-  }
-  
-} catch (error) {
-  console.error('❌ Database connection failed:', error.message);
-  if (error.message.includes('ETIMEDOUT')) {
-    console.error('💡 This appears to be a network timeout issue');
-    console.error('💡 The database might be starting up or experiencing network issues');
-  }
-}
+testDatabaseConnection();
