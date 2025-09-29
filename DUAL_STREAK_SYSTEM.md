@@ -31,16 +31,21 @@ The TextMasterQuiz app now features a sophisticated **dual streak system** that 
 - Both play streak and winning streak continue (+1 each)
 - Progressive bonus based on winning streak length
 
-## Winning Streak Bonus Calculation
+## Linear Bonus Calculation
 
-| Winning Streak | Bonus per Win | Example Points |
-|---|---|---|
-| 1-2 wins | +0 bonus | 100 points |
-| 3-6 wins | +2 bonus per win | 102, 104, 106, 108 |
-| 7-13 wins | +3 bonus per win | 111, 114, 117, 120, 123, 126, 129 |
-| 14-20 wins | +4 bonus per win | 133, 137, 141, 145, 149, 153, 157 |
-| 21-29 wins | +5 bonus per win | 162, 167, 172, 177, 182, 187, 192, 197, 202 |
-| 30+ wins | +7 bonus per win | 209, 216, 223, 230... |
+### Simple Formula
+- **Correct Answer Points** = 100 + (winningStreak × 20) + (playStreak × 1)
+- **Wrong Answer Points** = 10 (no bonuses)
+
+### Examples
+| Play | Win | Calculation | Total Points |
+|---|---|---|---|
+| 1 | 1 | 100 + 20 + 1 | 121 |
+| 3 | 3 | 100 + 60 + 3 | 163 |
+| 7 | 7 | 100 + 140 + 7 | **247** |
+| 10 | 5 | 100 + 100 + 10 | 210 |
+| 15 | 10 | 100 + 200 + 15 | 315 |
+| 30 | 25 | 100 + 500 + 30 | 630 |
 
 ## Message System
 
@@ -61,15 +66,15 @@ The TextMasterQuiz app now features a sophisticated **dual streak system** that 
 ## Example Scenarios
 
 ### Scenario 1: Perfect Player
-- **Day 1**: Correct → 100 points (W:1, P:1)
-- **Day 2**: Correct → 100 points (W:2, P:2)  
-- **Day 3**: Correct → 102 points (W:3, P:3) + "Nice winning streak!"
-- **Day 7**: Correct → 111 points (W:7, P:7) + "Great winning streak!"
+- **Day 1**: Correct → 121 points (W:1, P:1) = 100 + 20 + 1
+- **Day 2**: Correct → 142 points (W:2, P:2) = 100 + 40 + 2
+- **Day 3**: Correct → 163 points (W:3, P:3) = 100 + 60 + 3 + "Nice winning streak!"
+- **Day 7**: Correct → **247 points** (W:7, P:7) = 100 + 140 + 7 + "Great winning streak!"
 
 ### Scenario 2: Dedicated but Struggling Player
-- **Day 1**: Correct → 100 points (W:1, P:1)
+- **Day 1**: Correct → 121 points (W:1, P:1) = 100 + 20 + 1
 - **Day 2**: Wrong → 10 points (W:0, P:2) + "Thanks for trying!"
-- **Day 3**: Correct → 100 points (W:1, P:3) + "Nice play streak!"
+- **Day 3**: Correct → 123 points (W:1, P:3) = 100 + 20 + 3 + "Nice play streak!"
 - **Day 4**: Wrong → 10 points (W:0, P:4) + "Great play streak continues!"
 
 ### Scenario 3: Wrong Answer with High Streaks

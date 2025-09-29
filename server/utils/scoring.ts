@@ -1,10 +1,12 @@
 /**
- * Dual streak bonus scoring system
- * Play Streak: Continues as long as you play daily (used for messaging and play milestones)
- * Winning Streak: Resets on wrong answers (used for bonus points calculation)
+ * Linear dual streak bonus scoring system
+ * Play Streak: Continues as long as you play daily (+1 point per day)
+ * Winning Streak: Resets on wrong answers (+20 points per consecutive win)
  * 
- * +10 points for wrong answers (no streak bonus, winning streak resets)
- * +100 points for correct answers + winning streak bonus that increases with longer winning streaks
+ * Wrong answers: 10 points (no bonuses, winning streak resets, play streak continues)
+ * Correct answers: 100 base + (winningStreak * 20) + (playStreak * 1) points
+ * 
+ * Example: 7-day winning streak with 7-day play streak = 100 + 140 + 7 = 247 points
  */
 
 export function calculatePoints(isCorrect: boolean, winningStreak: number, playStreak: number = 0): number {
@@ -12,36 +14,15 @@ export function calculatePoints(isCorrect: boolean, winningStreak: number, playS
     return 10; // Always get 10 points for trying, even when wrong
   }
 
-  const basePoints = 100; // Increased base points for correct answers
-  let streakBonus = 0;
+  const basePoints = 100; // Base points for correct answers
+  
+  // Linear bonus system:
+  // Play Streak: +1 point per day (simple participation reward)
+  // Winning Streak: +20 points per day (significant accuracy reward)
+  const playStreakBonus = playStreak; // +1 point per day played
+  const winningStreakBonus = winningStreak * 20; // +20 points per consecutive win
 
-  // Progressive winning streak bonus system:
-  // Wrong answers: 10 points (no streak bonus, winning streak resets to 0)
-  // 1-2 correct: No bonus (100 points)
-  // 3-6 correct: +2 bonus per win (102, 104, 106, 108)
-  // 7-13 correct: +3 bonus per win (111, 114, 117, 120, 123, 126, 129)
-  // 14-20 correct: +4 bonus per win (133, 137, 141, 145, 149, 153, 157)
-  // 21-29 correct: +5 bonus per win (162, 167, 172, 177, 182, 187, 192, 197, 202)
-  // 30+ correct: +7 bonus per win (209, 216, 223, ...)
-
-  if (winningStreak >= 3 && winningStreak <= 6) {
-    // Wins 3-6: +2 bonus per win
-    streakBonus = (winningStreak - 2) * 2;
-  } else if (winningStreak >= 7 && winningStreak <= 13) {
-    // Wins 7-13: Previous bonus (8) + 3 per additional win
-    streakBonus = 8 + ((winningStreak - 6) * 3);
-  } else if (winningStreak >= 14 && winningStreak <= 20) {
-    // Wins 14-20: Previous bonus (29) + 4 per additional win
-    streakBonus = 29 + ((winningStreak - 13) * 4);
-  } else if (winningStreak >= 21 && winningStreak <= 29) {
-    // Wins 21-29: Previous bonus (57) + 5 per additional win
-    streakBonus = 57 + ((winningStreak - 20) * 5);
-  } else if (winningStreak >= 30) {
-    // Wins 30+: Previous bonus (102) + 7 per additional win
-    streakBonus = 102 + ((winningStreak - 29) * 7);
-  }
-
-  return basePoints + streakBonus;
+  return basePoints + winningStreakBonus + playStreakBonus;
 }
 
 /**
@@ -115,14 +96,26 @@ export function getPointsBreakdown(isCorrect: boolean, winningStreak: number, pl
   }
 
   const basePoints = 100;
-  const streakBonus = totalPoints - basePoints;
+  const playStreakBonus = playStreak; // +1 per day played
+  const winningStreakBonus = winningStreak * 20; // +20 per day won
+  const totalBonuses = playStreakBonus + winningStreakBonus;
+  
   const winningMessage = getWinningStreakMessage(winningStreak);
   const playMessage = getPlayStreakMessage(playStreak);
 
   let message = `Score: +${totalPoints} points`;
   
-  if (streakBonus > 0) {
-    message += ` (${basePoints} base + ${streakBonus} winning bonus!)`;
+  // Show detailed breakdown
+  if (totalBonuses > 0) {
+    message += ` (${basePoints} base`;
+    if (winningStreakBonus > 0) {
+      message += ` + ${winningStreakBonus} winning`;
+    }
+    if (playStreakBonus > 0) {
+      message += ` + ${playStreakBonus} play`;
+    }
+    message += `!)`;
+    
     if (winningMessage) {
       message += `\n${winningMessage}`;
     }
@@ -135,7 +128,7 @@ export function getPointsBreakdown(isCorrect: boolean, winningStreak: number, pl
   return {
     totalPoints,
     basePoints,
-    streakBonus,
+    streakBonus: totalBonuses,
     message
   };
 }
@@ -146,13 +139,13 @@ export function getPointsBreakdown(isCorrect: boolean, winningStreak: number, pl
 export function getWinningStreakPreview(): { winningStreak: number, points: number }[] {
   const preview = [];
   
-  // Sample key winning streak milestones
-  const milestones = [1, 2, 3, 4, 5, 6, 7, 10, 13, 14, 17, 20, 21, 25, 29, 30, 35, 40, 50, 100];
+  // Sample key winning streak milestones (linear system is simpler!)
+  const milestones = [1, 2, 3, 4, 5, 7, 10, 15, 20, 25, 30, 50];
   
   for (const winningStreak of milestones) {
     preview.push({
       winningStreak,
-      points: calculatePoints(true, winningStreak, 0)
+      points: calculatePoints(true, winningStreak, winningStreak) // Assume play streak = winning streak for preview
     });
   }
   

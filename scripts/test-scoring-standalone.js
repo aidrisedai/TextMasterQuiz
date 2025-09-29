@@ -1,40 +1,19 @@
 // Standalone test for progressive streak bonus scoring
 
-function calculatePoints(isCorrect, currentStreak) {
+function calculatePoints(isCorrect, winningStreak, playStreak = 0) {
   if (!isCorrect) {
     return 10; // Always get 10 points for trying, even when wrong
   }
 
-  const basePoints = 100; // Increased base points for correct answers
-  let streakBonus = 0;
+  const basePoints = 100; // Base points for correct answers
+  
+  // Linear bonus system:
+  // Play Streak: +1 point per day (simple participation reward)
+  // Winning Streak: +20 points per day (significant accuracy reward)
+  const playStreakBonus = playStreak; // +1 point per day played
+  const winningStreakBonus = winningStreak * 20; // +20 points per consecutive win
 
-  // Progressive streak bonus system:
-  // Wrong answers: 10 points (no streak bonus)
-  // 1-2 days: No bonus (100 points)
-  // 3-6 days: +2 bonus per day (102, 104, 106, 108)
-  // 7-13 days: +3 bonus per day (111, 114, 117, 120, 123, 126, 129)
-  // 14-20 days: +4 bonus per day (133, 137, 141, 145, 149, 153, 157)
-  // 21-29 days: +5 bonus per day (162, 167, 172, 177, 182, 187, 192, 197, 202)
-  // 30+ days: +7 bonus per day (209, 216, 223, ...)
-
-  if (currentStreak >= 3 && currentStreak <= 6) {
-    // Days 3-6: +2 bonus per day
-    streakBonus = (currentStreak - 2) * 2;
-  } else if (currentStreak >= 7 && currentStreak <= 13) {
-    // Days 7-13: Previous bonus (8) + 3 per additional day
-    streakBonus = 8 + ((currentStreak - 6) * 3);
-  } else if (currentStreak >= 14 && currentStreak <= 20) {
-    // Days 14-20: Previous bonus (29) + 4 per additional day
-    streakBonus = 29 + ((currentStreak - 13) * 4);
-  } else if (currentStreak >= 21 && currentStreak <= 29) {
-    // Days 21-29: Previous bonus (57) + 5 per additional day
-    streakBonus = 57 + ((currentStreak - 20) * 5);
-  } else if (currentStreak >= 30) {
-    // Days 30+: Previous bonus (102) + 7 per additional day
-    streakBonus = 102 + ((currentStreak - 29) * 7);
-  }
-
-  return basePoints + streakBonus;
+  return basePoints + winningStreakBonus + playStreakBonus;
 }
 
 function getStreakBonusMessage(streak) {
@@ -54,7 +33,7 @@ function getStreakBonusMessage(streak) {
   return "";
 }
 
-function getPointsBreakdown(isCorrect, currentStreak) {
+function getPointsBreakdown(isCorrect, winningStreak, playStreak = 0) {
   if (!isCorrect) {
     return {
       totalPoints: 10,
@@ -64,65 +43,82 @@ function getPointsBreakdown(isCorrect, currentStreak) {
     };
   }
 
-  const totalPoints = calculatePoints(isCorrect, currentStreak);
+  const totalPoints = calculatePoints(isCorrect, winningStreak, playStreak);
   const basePoints = 100;
-  const streakBonus = totalPoints - basePoints;
-  const bonusMessage = getStreakBonusMessage(currentStreak);
+  const playStreakBonus = playStreak;
+  const winningStreakBonus = winningStreak * 20;
+  const totalBonuses = playStreakBonus + winningStreakBonus;
 
   let message = `Score: +${totalPoints} points`;
   
-  if (streakBonus > 0) {
-    message += ` (${basePoints} base + ${streakBonus} streak bonus!)`;
-    if (bonusMessage) {
-      message += `\n${bonusMessage}`;
+  if (totalBonuses > 0) {
+    message += ` (${basePoints} base`;
+    if (winningStreakBonus > 0) {
+      message += ` + ${winningStreakBonus} winning`;
     }
+    if (playStreakBonus > 0) {
+      message += ` + ${playStreakBonus} play`;
+    }
+    message += `!)`;
   }
 
   return {
     totalPoints,
     basePoints,
-    streakBonus,
+    streakBonus: totalBonuses,
     message
   };
 }
 
 // Test the progressive scoring system
-console.log('🎯 Progressive Streak Bonus System Test');
-console.log('=======================================\n');
+console.log('🎯 Linear Dual Streak System Test');
+console.log('===================================\n');
 
-console.log('📊 Points at Key Streak Milestones:');
-console.log('===================================');
+console.log('📊 Points at Key Streak Combinations:');
+console.log('====================================');
 
-const milestones = [1, 2, 3, 4, 5, 6, 7, 10, 13, 14, 17, 20, 21, 25, 29, 30, 35, 40, 50, 100];
+// Test various combinations of play and winning streaks
+const testCombos = [
+  { play: 1, win: 1 },
+  { play: 3, win: 3 },
+  { play: 5, win: 5 },
+  { play: 7, win: 7 }, // Your example
+  { play: 10, win: 5 }, // Play streak higher than winning
+  { play: 15, win: 10 },
+  { play: 20, win: 15 },
+  { play: 30, win: 25 }
+];
 
-milestones.forEach(streak => {
-    const points = calculatePoints(true, streak);
-    console.log(`Day ${streak.toString().padStart(3)}: ${points.toString().padStart(3)} points`);
+testCombos.forEach(combo => {
+    const points = calculatePoints(true, combo.win, combo.play);
+    const playBonus = combo.play;
+    const winBonus = combo.win * 20;
+    console.log(`P:${combo.play.toString().padStart(2)} W:${combo.win.toString().padStart(2)} = ${points.toString().padStart(3)} pts (100 + ${winBonus} + ${playBonus})`);
 });
 
-console.log('\n🔥 Scoring Breakdown Examples:');
-console.log('==============================');
+console.log('\n🔥 Detailed Scoring Examples:');
+console.log('===============================');
 
-const testStreaks = [1, 3, 7, 14, 21, 30, 50];
+const detailTests = [1, 3, 7, 10, 15];
 
-testStreaks.forEach(streak => {
-    const breakdown = getPointsBreakdown(true, streak);
-    console.log(`\nStreak ${streak}:`);
+detailTests.forEach(streak => {
+    const breakdown = getPointsBreakdown(true, streak, streak);
+    console.log(`\nStreak ${streak} (both play & winning):`);
     console.log(`- Total Points: ${breakdown.totalPoints}`);
-    console.log(`- Base: ${breakdown.basePoints}, Bonus: ${breakdown.streakBonus}`);
+    console.log(`- Base: ${breakdown.basePoints}, Bonuses: ${breakdown.streakBonus}`);
     console.log(`- Message: "${breakdown.message}"`);
 });
 
-console.log('\n❌ Incorrect Answer Test:');
-console.log('=========================');
-const wrongAnswer = getPointsBreakdown(false, 10);
-console.log(`Incorrect answer (10-day streak): ${wrongAnswer.totalPoints} points`);
+console.log('\n❌ Wrong Answer Test:');
+console.log('======================');
+const wrongAnswer = getPointsBreakdown(false, 10, 15);
+console.log(`Wrong answer (P:15, W:10): ${wrongAnswer.totalPoints} points`);
 console.log(`Message: "${wrongAnswer.message}"`);
 
-console.log('\n✅ Progressive Scoring System is working correctly!');
+console.log('\n✅ Linear Dual Streak System is working correctly!');
 console.log('🎉 Key Benefits:');
-console.log('- Motivates longer streaks with increasing rewards');
-console.log('- 10 points for wrong answers encourages participation');
-console.log('- 100 base points for correct answers with streak bonuses');
-console.log('- Exponential growth rewards dedicated users');
-console.log('- Encouraging messages build engagement');
+console.log('- Simple linear bonuses: +1 per play day, +20 per win day');
+console.log('- Easy to understand and calculate');
+console.log('- Rewards both participation (play streak) and accuracy (winning streak)');
+console.log('- 7-day perfect streak = 100 + 140 + 7 = 247 points!');
+console.log('- Still encourages participation with 10 points for wrong answers');
