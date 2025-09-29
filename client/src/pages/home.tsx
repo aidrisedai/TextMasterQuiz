@@ -101,6 +101,13 @@ export default function Home() {
               >
                 Demo
               </a>
+              <a
+                href="/leaderboard"
+                className="text-muted-foreground hover:text-primary transition-colors flex items-center"
+              >
+                <Trophy className="mr-1 h-4 w-4" />
+                Leaderboard
+              </a>
               <Button
                 variant="ghost"
                 size="sm"

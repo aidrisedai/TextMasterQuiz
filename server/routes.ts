@@ -558,6 +558,130 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Leaderboard routes (public)
+  app.get("/api/leaderboards/total-score", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topUsers = await storage.getTopUsersByTotalScore(limit);
+      
+      const leaderboard = topUsers.map((user, index) => ({
+        rank: index + 1,
+        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'), // Mask phone number
+        totalScore: user.totalScore,
+        questionsAnswered: user.questionsAnswered,
+        accuracyRate: user.questionsAnswered > 0 
+          ? Math.round((user.correctAnswers / user.questionsAnswered) * 100)
+          : 0,
+        joinDate: user.joinDate
+      }));
+      
+      res.json({
+        type: 'totalScore',
+        title: '🏆 Total Points Leaders',
+        description: 'Top quiz masters by total points earned',
+        leaderboard
+      });
+    } catch (error: any) {
+      console.error('Error fetching total score leaderboard:', error);
+      res.status(500).json({ message: 'Failed to fetch leaderboard' });
+    }
+  });
+  
+  app.get("/api/leaderboards/play-streak", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topUsers = await storage.getTopUsersByPlayStreak(limit);
+      
+      const leaderboard = topUsers.map((user, index) => ({
+        rank: index + 1,
+        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        playStreak: user.playStreak || user.currentStreak || 0, // Fallback to currentStreak for migration
+        totalScore: user.totalScore,
+        questionsAnswered: user.questionsAnswered,
+        joinDate: user.joinDate
+      }));
+      
+      res.json({
+        type: 'playStreak',
+        title: '🎯 Daily Champions',
+        description: 'Most consistent daily players',
+        leaderboard
+      });
+    } catch (error: any) {
+      console.error('Error fetching play streak leaderboard:', error);
+      res.status(500).json({ message: 'Failed to fetch leaderboard' });
+    }
+  });
+  
+  app.get("/api/leaderboards/winning-streak", async (req, res) => {
+    try {
+      const limit = parseInt(req.query.limit as string) || 10;
+      const topUsers = await storage.getTopUsersByWinningStreak(limit);
+      
+      const leaderboard = topUsers.map((user, index) => ({
+        rank: index + 1,
+        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        winningStreak: user.winningStreak || 0,
+        totalScore: user.totalScore,
+        accuracyRate: user.questionsAnswered > 0 
+          ? Math.round((user.correctAnswers / user.questionsAnswered) * 100)
+          : 0,
+        joinDate: user.joinDate
+      }));
+      
+      res.json({
+        type: 'winningStreak',
+        title: '🔥 Winning Legends',
+        description: 'Longest consecutive correct streaks',
+        leaderboard
+      });
+    } catch (error: any) {
+      console.error('Error fetching winning streak leaderboard:', error);
+      res.status(500).json({ message: 'Failed to fetch leaderboard' });
+    }
+  });
+  
+  // Get user's position on all leaderboards
+  app.get("/api/user/:phoneNumber/leaderboard-position", async (req, res) => {
+    try {
+      const user = await storage.getUserByPhoneNumber(req.params.phoneNumber);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const [totalScoreRank, playStreakRank, winningStreakRank] = await Promise.all([
+        storage.getUserRank(user.id, 'totalScore'),
+        storage.getUserRank(user.id, 'playStreak'),
+        storage.getUserRank(user.id, 'winningStreak')
+      ]);
+
+      res.json({
+        userId: user.id,
+        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        positions: {
+          totalScore: {
+            rank: totalScoreRank,
+            value: user.totalScore,
+            title: 'Total Points'
+          },
+          playStreak: {
+            rank: playStreakRank,
+            value: user.playStreak || user.currentStreak || 0,
+            title: 'Play Streak'
+          },
+          winningStreak: {
+            rank: winningStreakRank,
+            value: user.winningStreak || 0,
+            title: 'Winning Streak'
+          }
+        }
+      });
+    } catch (error: any) {
+      console.error('Error fetching user leaderboard position:', error);
+      res.status(500).json({ message: 'Failed to fetch user position' });
+    }
+  });
+  
   // Admin routes for question management
   app.use("/api/admin", requireAdmin, adminRoutes);
   

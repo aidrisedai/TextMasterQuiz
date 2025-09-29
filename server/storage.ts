@@ -75,6 +75,12 @@ export interface IStorage {
   
   // Connection testing
   testConnection(): Promise<void>;
+  
+  // Leaderboard methods
+  getTopUsersByTotalScore(limit?: number): Promise<User[]>;
+  getTopUsersByPlayStreak(limit?: number): Promise<User[]>;
+  getTopUsersByWinningStreak(limit?: number): Promise<User[]>;
+  getUserRank(userId: number, type: 'totalScore' | 'playStreak' | 'winningStreak'): Promise<number>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -952,6 +958,80 @@ export class DatabaseStorage implements IStorage {
       console.error('❌ Error checking database schema:', error);
       // Don't throw here - let the app continue and fail gracefully if tables don't exist
     }
+  }
+  
+  // Leaderboard implementations
+  async getTopUsersByTotalScore(limit = 10): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.isActive, true))
+      .orderBy(desc(users.totalScore))
+      .limit(limit);
+  }
+  
+  async getTopUsersByPlayStreak(limit = 10): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.isActive, true))
+      .orderBy(desc(users.playStreak))
+      .limit(limit);
+  }
+  
+  async getTopUsersByWinningStreak(limit = 10): Promise<User[]> {
+    return await db
+      .select()
+      .from(users)
+      .where(eq(users.isActive, true))
+      .orderBy(desc(users.winningStreak))
+      .limit(limit);
+  }
+  
+  async getUserRank(userId: number, type: 'totalScore' | 'playStreak' | 'winningStreak'): Promise<number> {
+    const user = await this.getUser(userId);
+    if (!user) return 0;
+    
+    let query;
+    let userValue;
+    
+    switch (type) {
+      case 'totalScore':
+        userValue = user.totalScore;
+        query = db
+          .select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(and(
+            eq(users.isActive, true),
+            sql`${users.totalScore} > ${userValue}`
+          ));
+        break;
+        
+      case 'playStreak':
+        userValue = user.playStreak || 0;
+        query = db
+          .select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(and(
+            eq(users.isActive, true),
+            sql`${users.playStreak} > ${userValue}`
+          ));
+        break;
+        
+      case 'winningStreak':
+        userValue = user.winningStreak || 0;
+        query = db
+          .select({ count: sql<number>`count(*)` })
+          .from(users)
+          .where(and(
+            eq(users.isActive, true),
+            sql`${users.winningStreak} > ${userValue}`
+          ));
+        break;
+    }
+    
+    const result = await query;
+    return (result[0]?.count || 0) + 1; // +1 because rank is 1-based
   }
 }
 
