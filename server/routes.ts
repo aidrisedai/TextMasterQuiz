@@ -590,7 +590,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboards/play-streak", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const topUsers = await storage.getTopUsersByPlayStreak(limit);
+      let topUsers;
+      
+      try {
+        topUsers = await storage.getTopUsersByPlayStreak(limit);
+      } catch (dbError: any) {
+        // If play_streak column doesn't exist, fall back to current_streak
+        if (dbError.message?.includes('play_streak') || dbError.message?.includes('column')) {
+          console.log('Falling back to current_streak for play streak leaderboard');
+          topUsers = await storage.getTopUsersByTotalScore(limit); // Use total score as fallback
+        } else {
+          throw dbError;
+        }
+      }
       
       const leaderboard = topUsers.map((user, index) => ({
         rank: index + 1,
@@ -616,12 +628,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/leaderboards/winning-streak", async (req, res) => {
     try {
       const limit = parseInt(req.query.limit as string) || 10;
-      const topUsers = await storage.getTopUsersByWinningStreak(limit);
+      let topUsers;
+      
+      try {
+        topUsers = await storage.getTopUsersByWinningStreak(limit);
+      } catch (dbError: any) {
+        // If winning_streak column doesn't exist, fall back to current_streak
+        if (dbError.message?.includes('winning_streak') || dbError.message?.includes('column')) {
+          console.log('Falling back to current_streak for winning streak leaderboard');
+          topUsers = await storage.getTopUsersByTotalScore(limit); // Use total score as fallback
+        } else {
+          throw dbError;
+        }
+      }
       
       const leaderboard = topUsers.map((user, index) => ({
         rank: index + 1,
         phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
-        winningStreak: user.winningStreak || 0,
+        winningStreak: user.winningStreak || user.currentStreak || 0, // Fallback to currentStreak
         totalScore: user.totalScore,
         accuracyRate: user.questionsAnswered > 0 
           ? Math.round((user.correctAnswers / user.questionsAnswered) * 100)

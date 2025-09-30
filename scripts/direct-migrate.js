@@ -1,15 +1,28 @@
 #!/usr/bin/env node
 
 /**
- * Simple migration script for Render deployment
- * Adds play_streak and winning_streak columns if they don't exist
+ * Direct migration script for adding streak columns
+ * Connects directly to PostgreSQL without requiring compiled code
  */
 
-async function simpleMigration() {
-  console.log('🚀 Running simple dual streak migration...');
+import pg from 'pg';
+
+const { Pool } = pg;
+
+async function directMigration() {
+  console.log('🚀 Running direct dual streak migration...');
+  
+  if (!process.env.DATABASE_URL) {
+    console.error('❌ DATABASE_URL environment variable is required');
+    process.exit(1);
+  }
+  
+  const pool = new Pool({
+    connectionString: process.env.DATABASE_URL,
+    ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false
+  });
   
   try {
-    const { pool } = await import('../dist/index.js');
     const client = await pool.connect();
     
     try {
@@ -21,7 +34,7 @@ async function simpleMigration() {
         `);
         console.log('✅ play_streak column added/verified');
       } catch (error) {
-        console.log('ℹ️  play_streak column may already exist');
+        console.log('ℹ️  play_streak column operation result:', error.message);
       }
       
       // Add winning_streak column if it doesn't exist
@@ -32,18 +45,18 @@ async function simpleMigration() {
         `);
         console.log('✅ winning_streak column added/verified');
       } catch (error) {
-        console.log('ℹ️  winning_streak column may already exist');
+        console.log('ℹ️  winning_streak column operation result:', error.message);
       }
       
       // Initialize dual streaks from current_streak for users with 0 values
       const result = await client.query(`
         UPDATE users 
         SET 
-          play_streak = current_streak,
-          winning_streak = current_streak
+          play_streak = COALESCE(current_streak, 0),
+          winning_streak = COALESCE(current_streak, 0)
         WHERE 
-          (play_streak = 0 AND current_streak > 0) OR 
-          (winning_streak = 0 AND current_streak > 0);
+          (play_streak = 0 AND COALESCE(current_streak, 0) > 0) OR 
+          (winning_streak = 0 AND COALESCE(current_streak, 0) > 0);
       `);
       
       console.log(`✅ Initialized dual streaks for ${result.rowCount || 0} users`);
@@ -53,7 +66,9 @@ async function simpleMigration() {
         SELECT 
           COUNT(*) as total_users,
           COUNT(CASE WHEN play_streak > 0 THEN 1 END) as users_with_play_streak,
-          COUNT(CASE WHEN winning_streak > 0 THEN 1 END) as users_with_winning_streak
+          COUNT(CASE WHEN winning_streak > 0 THEN 1 END) as users_with_winning_streak,
+          MAX(play_streak) as max_play_streak,
+          MAX(winning_streak) as max_winning_streak
         FROM users;
       `);
       
@@ -62,8 +77,10 @@ async function simpleMigration() {
       console.log(`   Total users: ${userStats.total_users}`);
       console.log(`   Users with play streaks: ${userStats.users_with_play_streak}`);
       console.log(`   Users with winning streaks: ${userStats.users_with_winning_streak}`);
+      console.log(`   Max play streak: ${userStats.max_play_streak}`);
+      console.log(`   Max winning streak: ${userStats.max_winning_streak}`);
       
-      console.log('✅ Simple migration completed successfully!');
+      console.log('✅ Direct migration completed successfully!');
       
     } finally {
       client.release();
@@ -72,7 +89,9 @@ async function simpleMigration() {
   } catch (error) {
     console.error('❌ Migration failed:', error);
     process.exit(1);
+  } finally {
+    await pool.end();
   }
 }
 
-simpleMigration().then(() => process.exit(0));
+directMigration().then(() => process.exit(0));
