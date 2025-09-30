@@ -3,8 +3,63 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Production security middleware
+if (process.env.NODE_ENV === 'production') {
+  // Basic security headers
+  app.use((req, res, next) => {
+    res.setHeader('X-Frame-Options', 'DENY');
+    res.setHeader('X-Content-Type-Options', 'nosniff');
+    res.setHeader('X-XSS-Protection', '1; mode=block');
+    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+    next();
+  });
+
+  // Rate limiting for API endpoints
+  const rateLimitMap = new Map();
+  const RATE_LIMIT_WINDOW = 15 * 60 * 1000; // 15 minutes
+  const RATE_LIMIT_MAX_REQUESTS = 100; // requests per window
+
+  app.use('/api', (req, res, next) => {
+    const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT_WINDOW;
+    
+    if (!rateLimitMap.has(clientIP)) {
+      rateLimitMap.set(clientIP, []);
+    }
+    
+    const requests = rateLimitMap.get(clientIP);
+    // Remove old requests outside the window
+    const recentRequests = requests.filter((time: number) => time > windowStart);
+    
+    if (recentRequests.length >= RATE_LIMIT_MAX_REQUESTS) {
+      return res.status(429).json({ message: 'Too many requests. Please try again later.' });
+    }
+    
+    recentRequests.push(now);
+    rateLimitMap.set(clientIP, recentRequests);
+    
+    next();
+  });
+  
+  // Clean up rate limit map periodically
+  setInterval(() => {
+    const now = Date.now();
+    const windowStart = now - RATE_LIMIT_WINDOW;
+    rateLimitMap.forEach((requests, ip) => {
+      const recentRequests = requests.filter((time: number) => time > windowStart);
+      if (recentRequests.length === 0) {
+        rateLimitMap.delete(ip);
+      } else {
+        rateLimitMap.set(ip, recentRequests);
+      }
+    });
+  }, RATE_LIMIT_WINDOW);
+}
+
+app.use(express.json({ limit: '1mb' })); // Limit JSON payload size
+app.use(express.urlencoded({ extended: false, limit: '1mb' })); // Limit form data size
 
 app.use((req, res, next) => {
   const start = Date.now();

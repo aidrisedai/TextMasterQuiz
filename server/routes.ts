@@ -56,17 +56,29 @@ async function comparePasswords(supplied: string, stored: string): Promise<boole
 
 // Create default admin user if it doesn't exist
 async function ensureDefaultAdmin() {
-  const existingAdmin = await storage.getAdminByUsername("adminadmin123");
+  // Only create admin if environment variables are provided
+  const adminUsername = process.env.ADMIN_USERNAME;
+  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminEmail = process.env.ADMIN_EMAIL;
+  
+  if (!adminUsername || !adminPassword || !adminEmail) {
+    console.log('⚠️  Default admin creation skipped - set ADMIN_USERNAME, ADMIN_PASSWORD, and ADMIN_EMAIL env vars to create default admin');
+    return;
+  }
+  
+  const existingAdmin = await storage.getAdminByUsername(adminUsername);
   if (!existingAdmin) {
-    const hashedPassword = await hashPassword("YaallaH100%.");
+    const hashedPassword = await hashPassword(adminPassword);
     await storage.createAdmin({
-      username: "adminadmin123",
+      username: adminUsername,
       password: hashedPassword,
       name: "Administrator",
-      email: "admin@text4quiz.com",
+      email: adminEmail,
       isActive: true,
     });
-    console.log("Default admin user created");
+    console.log(`✅ Default admin user '${adminUsername}' created`);
+  } else {
+    console.log(`ℹ️  Admin user '${adminUsername}' already exists`);
   }
 }
 
@@ -395,9 +407,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const { username, password } = req.body;
       
+      // Input validation
       if (!username || !password) {
         return res.status(400).json({ message: "Username and password are required" });
       }
+      
+      if (typeof username !== 'string' || typeof password !== 'string') {
+        return res.status(400).json({ message: "Invalid input format" });
+      }
+      
+      if (username.length > 100 || password.length > 200) {
+        return res.status(400).json({ message: "Input too long" });
+      }
+      
+      // Rate limiting for login attempts per IP
+      const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+      const loginAttemptKey = `login_${clientIP}`;
+      
+      // Simple in-memory rate limiting for login attempts
+      if (!(global as any).loginAttempts) {
+        (global as any).loginAttempts = new Map();
+      }
+      
+      const now = Date.now();
+      const attempts = (global as any).loginAttempts.get(loginAttemptKey) || [];
+      const recentAttempts = attempts.filter((time: number) => now - time < 15 * 60 * 1000); // 15 minutes
+      
+      if (recentAttempts.length >= 5) {
+        return res.status(429).json({ message: "Too many login attempts. Please try again later." });
+      }
+      
+      recentAttempts.push(now);
+      (global as any).loginAttempts.set(loginAttemptKey, recentAttempts);
 
       const admin = await storage.getAdminByUsername(username);
       if (!admin || !admin.isActive) {
