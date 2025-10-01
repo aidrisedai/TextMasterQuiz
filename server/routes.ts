@@ -249,11 +249,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Twilio webhook for incoming SMS
   app.post("/api/webhook/sms", async (req, res) => {
     try {
-      console.log('📥 Incoming SMS webhook:', req.body);
+      console.log('=== SMS WEBHOOK RECEIVED ===');
+      console.log('📥 Full Twilio webhook body:', JSON.stringify(req.body, null, 2));
+      console.log('📥 Request headers:', JSON.stringify(req.headers, null, 2));
+      
       const { From: phoneNumber, Body: message } = req.body;
+      console.log(`📱 From: ${phoneNumber}`);
+      console.log(`💬 Message: "${message}"`);
       
       if (!phoneNumber || !message) {
         console.log('❌ Invalid webhook request - missing phone or message');
+        console.log(`phoneNumber present: ${!!phoneNumber}, message present: ${!!message}`);
         return res.status(400).send('Invalid request');
       }
 
@@ -267,11 +273,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const messageUpper = message.trim().toUpperCase();
+      console.log(`🔍 Processing message: "${messageUpper}" for user ${user.phoneNumber}`);
 
       // Handle commands
       let commandHandled = false;
       
       if (messageUpper === 'SCORE') {
+        console.log('📊 Processing SCORE command');
         const stats = await storage.getUserStats(user.id);
         await twilioService.sendStats(phoneNumber, stats);
         commandHandled = true;
@@ -310,22 +318,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // }
         commandHandled = true;
       } else if (['A', 'B', 'C', 'D'].includes(messageUpper)) {
+        console.log(`✅ Processing answer: ${messageUpper}`);
         // Handle answer
         await processAnswer(user, messageUpper, phoneNumber);
         commandHandled = true;
       }
       
       if (!commandHandled) {
+        console.log(`❓ Unrecognized command: "${messageUpper}"`);
         // Default response for unrecognized messages
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "Thanks for your message! Text HELP for available commands or wait for your next daily question."
         });
       }
-
+      
+      console.log(`✅ SMS webhook processed successfully for ${phoneNumber}`);
       res.status(200).send('OK');
     } catch (error: any) {
-      console.error("SMS webhook error:", error);
+      console.error('❌ SMS webhook error:', error);
+      console.error('Error details:', {
+        phone: req.body?.From,
+        message: req.body?.Body,
+        stack: error.stack
+      });
       res.status(500).send('Error');
     }
   });
@@ -830,11 +846,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log(`🔍 Processing answer "${answer}" for user ${user.phoneNumber}`);
       
-      // Find the most recent question this user was sent
-      const recentAnswers = await storage.getUserAnswers(user.id, 1);
+      // FIXED: Find pending answers (where userAnswer is null) with question data
+      const pendingAnswers = await storage.getPendingUserAnswers(user.id);
+      console.log(`📋 Found ${pendingAnswers.length} pending answer(s) for user ${user.phoneNumber}`);
       
-      if (recentAnswers.length === 0) {
-        console.log(`❌ No recent questions found for user ${user.phoneNumber}`);
+      if (pendingAnswers.length === 0) {
+        console.log(`❌ No pending questions found for user ${user.phoneNumber}`);
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "No recent question found. Please wait for your next daily question."
@@ -842,11 +859,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      const lastAnswer = recentAnswers[0];
-      const question = lastAnswer.question;
+      // Get the most recent pending answer
+      const pendingAnswer = pendingAnswers[0];
+      
+      const question = pendingAnswer.question;
       
       if (!question) {
-        console.log(`❌ Question not found for user ${user.phoneNumber}`);
+        console.log(`❌ Question not found for pending answer for user ${user.phoneNumber}`);
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "Question not found. Please wait for your next daily question."
@@ -854,15 +873,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // Check if user already answered this question
-      if (lastAnswer.userAnswer) {
-        console.log(`⚠️  User ${user.phoneNumber} already answered question ${question.id}`);
-        await twilioService.sendSMS({
-          to: phoneNumber,
-          body: "You've already answered this question. Wait for your next daily question!"
-        });
-        return;
-      }
+      console.log(`✅ Found pending question ${question.id} for user ${user.phoneNumber}: "${question.questionText.substring(0, 50)}..."`);
       
       // Validate the answer against the correct answer
       const isCorrect = question.correctAnswer.toUpperCase() === answer.toUpperCase();
@@ -875,11 +886,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📈 Current streaks: Play=${currentStats.playStreak}, Winning=${currentStats.winningStreak}`);
       
       // Update the existing pending answer record
-      await storage.updateAnswer(lastAnswer.id, {
+      await storage.updateAnswer(pendingAnswer.id, {
         userAnswer: answer,
         isCorrect,
         pointsEarned,
       });
+      
+      console.log(`✅ Updated pending answer ${pendingAnswer.id} for user ${user.phoneNumber}`);
 
       // Get updated stats (after the streak updates in storage)
       const stats = await storage.getUserStats(user.id);

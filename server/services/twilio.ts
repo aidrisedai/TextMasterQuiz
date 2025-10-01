@@ -112,14 +112,7 @@ export class TwilioService {
     question: any,
     questionNumber: number,
   ): Promise<boolean> {
-    const body = `🧠 Question #${questionNumber}: ${question.questionText}
-
-A) ${question.optionA}
-B) ${question.optionB}
-C) ${question.optionC}
-D) ${question.optionD}
-
-Reply with A, B, C, or D`;
+    const body = `🧠 Question #${questionNumber}: ${question.questionText}\n\nA) ${question.optionA}\nB) ${question.optionB}\nC) ${question.optionC}\nD) ${question.optionD}\n\nReply with A, B, C, or D`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }
@@ -138,41 +131,19 @@ Reply with A, B, C, or D`;
       ? "Correct!"
       : `Incorrect. The answer was ${correctAnswer}.`;
 
-    const body = `${emoji} ${result}
-
-${explanation}
-
-Streak: ${streak} days ${streak > 0 ? "🔥" : ""}
-${scoreMessage || `Score: +${points} points`}
-
-Text "SCORE" for stats or "HELP" for commands`;
+    const body = `${emoji} ${result}\n\n${explanation}\n\nStreak: ${streak} days ${streak > 0 ? "🔥" : ""}\n${scoreMessage || `Score: +${points} points`}\n\nText "SCORE" for stats or "HELP" for commands`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }
 
   async sendStats(phoneNumber: string, stats: any): Promise<boolean> {
-    const body = `📊 Your Text4Quiz Stats
-
-Current Streak: ${stats.currentStreak} days 🔥
-Total Score: ${stats.totalScore} points
-Questions Answered: ${stats.questionsAnswered}
-Accuracy Rate: ${stats.accuracyRate}%
-
-Keep up the great work!`;
+    const body = `📊 Your Text4Quiz Stats\n\nCurrent Streak: ${stats.currentStreak} days 🔥\nTotal Score: ${stats.totalScore} points\nQuestions Answered: ${stats.questionsAnswered}\nAccuracy Rate: ${stats.accuracyRate}%\n\nKeep up the great work!`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }
 
   async sendHelp(phoneNumber: string): Promise<boolean> {
-    const body = `📱 Text4Quiz Commands
-
-SCORE - View your stats
-MORE - Get bonus question (Premium)
-HELP - Show this help message
-STOP - Unsubscribe from service
-RESTART - Resume after pause
-
-Questions? Reply with your message.`;
+    const body = `📱 Text4Quiz Commands\n\nSCORE - View your stats\nMORE - Get bonus question (Premium)\nHELP - Show this help message\nSTOP - Unsubscribe from service\nRESTART - Resume after pause\n\nQuestions? Reply with your message.`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }
@@ -181,15 +152,7 @@ Questions? Reply with your message.`;
     phoneNumber: string,
     preferredTime: string,
   ): Promise<boolean> {
-    const body = `🎉 Welcome to Text4Quiz!
-
-Your first trivia question is being sent right now! 🧠
-Starting tomorrow, you'll receive daily questions at ${preferredTime}.
-
-Text "HELP" anytime for commands.
-Text "STOP" to unsubscribe.
-
-Let's see how much you know! 🎯`;
+    const body = `🎉 Welcome to Text4Quiz!\n\nYour first trivia question is being sent right now! 🧠\nStarting tomorrow, you'll receive daily questions at ${preferredTime}.\n\nText "HELP" anytime for commands.\nText "STOP" to unsubscribe.\n\nLet's see how much you know! 🎯`;
 
     return this.sendSMS({ to: phoneNumber, body });
   }

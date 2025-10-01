@@ -20,6 +20,7 @@ export interface IStorage {
   recordAnswer(answer: InsertUserAnswer): Promise<UserAnswer>;
   updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined>;
   getUserAnswers(userId: number, limit?: number): Promise<(UserAnswer & { question: Question })[]>;
+  getPendingUserAnswers(userId: number): Promise<(UserAnswer & { question: Question })[]>;
   
   // Stats methods
   getUserStats(userId: number): Promise<{
@@ -279,6 +280,30 @@ export class DatabaseStorage implements IStorage {
       .where(eq(userAnswers.userId, userId))
       .orderBy(desc(userAnswers.answeredAt))
       .limit(limit);
+    
+    return results.filter(result => result.question !== null) as (UserAnswer & { question: Question })[];
+  }
+  
+  async getPendingUserAnswers(userId: number): Promise<(UserAnswer & { question: Question })[]> {
+    const results = await db
+      .select({
+        id: userAnswers.id,
+        userId: userAnswers.userId,
+        questionId: userAnswers.questionId,
+        userAnswer: userAnswers.userAnswer,
+        isCorrect: userAnswers.isCorrect,
+        answeredAt: userAnswers.answeredAt,
+        pointsEarned: userAnswers.pointsEarned,
+        question: questions,
+      })
+      .from(userAnswers)
+      .leftJoin(questions, eq(userAnswers.questionId, questions.id))
+      .where(and(
+        eq(userAnswers.userId, userId),
+        isNull(userAnswers.userAnswer)
+      ))
+      .orderBy(desc(userAnswers.answeredAt))
+      .limit(5);
     
     return results.filter(result => result.question !== null) as (UserAnswer & { question: Question })[];
   }
