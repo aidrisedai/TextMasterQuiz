@@ -167,7 +167,7 @@ export default function Home() {
               <nav className="px-4 py-4 space-y-1">
                 <a
                   href="#features"
-                  className="flex items-center space-x-3 px-4 py-3 text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  className="flex items-center space-x-3 px-4 py-3 text-gray-900 dark:text-white font-semibold hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
                   onClick={(e) => {
                     e.preventDefault();
                     setMobileMenuOpen(false);
@@ -188,7 +188,7 @@ export default function Home() {
                 
                 <a
                   href="#demo"
-                  className="flex items-center space-x-3 px-4 py-3 text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  className="flex items-center space-x-3 px-4 py-3 text-gray-900 dark:text-white font-semibold hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
                   onClick={(e) => {
                     e.preventDefault();
                     setMobileMenuOpen(false);
@@ -209,7 +209,7 @@ export default function Home() {
                 
                 <a
                   href="/leaderboard"
-                  className="flex items-center space-x-3 px-4 py-3 text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  className="flex items-center space-x-3 px-4 py-3 text-gray-900 dark:text-white font-semibold hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
                   onClick={() => setMobileMenuOpen(false)}
                 >
                   <Trophy className="h-5 w-5" />
@@ -221,7 +221,7 @@ export default function Home() {
                     handleShare();
                     setMobileMenuOpen(false);
                   }}
-                  className="flex items-center space-x-3 px-4 py-3 text-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors w-full text-left min-h-[44px]"
+                  className="flex items-center space-x-3 px-4 py-3 text-gray-900 dark:text-white font-semibold hover:text-primary hover:bg-muted rounded-lg transition-colors w-full text-left min-h-[44px]"
                 >
                   <Share2 className="h-5 w-5" />
                   <span>Share</span>
