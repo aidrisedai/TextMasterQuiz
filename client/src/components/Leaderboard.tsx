@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Trophy, Target, Flame, Medal, Crown, Star } from 'lucide-react';
+import { Trophy, Target, Flame, Medal, Crown, Star, ArrowLeft, Home } from 'lucide-react';
+import { useLocation } from 'wouter';
 
 interface LeaderboardEntry {
   rank: number;
@@ -32,6 +33,7 @@ interface UserPositions {
 }
 
 const Leaderboard: React.FC = () => {
+  const [, setLocation] = useLocation();
   const [activeTab, setActiveTab] = useState<'totalScore' | 'playStreak' | 'winningStreak'>('totalScore');
   const [leaderboardData, setLeaderboardData] = useState<LeaderboardData | null>(null);
   const [userPositions, setUserPositions] = useState<UserPositions | null>(null);
@@ -179,6 +181,24 @@ const Leaderboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-4xl mx-auto px-4 py-8">
+        {/* Navigation */}
+        <div className="flex items-center justify-between mb-6">
+          <button
+            onClick={() => setLocation('/')}
+            className="flex items-center space-x-2 px-4 py-2 text-gray-600 hover:text-indigo-600 hover:bg-white rounded-lg transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5" />
+            <span>Back to Quiz</span>
+          </button>
+          <button
+            onClick={() => setLocation('/')}
+            className="flex items-center space-x-2 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+          >
+            <Home className="h-5 w-5" />
+            <span>Home</span>
+          </button>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold text-gray-900 mb-2">🏆 Leaderboards</h1>

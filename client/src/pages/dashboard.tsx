@@ -186,6 +186,13 @@ export default function Dashboard() {
               <span className="text-sm text-muted-foreground hidden sm:inline">
                 {user.phoneNumber}
               </span>
+              <Link href="/leaderboard">
+                <Button variant="outline" size="sm">
+                  <Trophy className="mr-2 h-4 w-4" />
+                  <span className="hidden sm:inline">Leaderboard</span>
+                  <span className="sm:hidden">Rank</span>
+                </Button>
+              </Link>
               <Link href="/">
                 <Button variant="ghost" size="sm">
                   <ArrowLeft className="mr-2 h-4 w-4" />

@@ -607,7 +607,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const leaderboard = topUsers.map((user, index) => ({
         rank: index + 1,
-        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'), // Mask phone number
+        phoneNumber: `****${user.phoneNumber.slice(-4)}`, // Show only last 4 digits
         totalScore: user.totalScore,
         questionsAnswered: user.questionsAnswered,
         accuracyRate: user.questionsAnswered > 0 
@@ -647,7 +647,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const leaderboard = topUsers.map((user, index) => ({
         rank: index + 1,
-        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        phoneNumber: `****${user.phoneNumber.slice(-4)}`,
         playStreak: user.playStreak || user.currentStreak || 0, // Fallback to currentStreak for migration
         totalScore: user.totalScore,
         questionsAnswered: user.questionsAnswered,
@@ -685,7 +685,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       const leaderboard = topUsers.map((user, index) => ({
         rank: index + 1,
-        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        phoneNumber: `****${user.phoneNumber.slice(-4)}`,
         winningStreak: user.winningStreak || user.currentStreak || 0, // Fallback to currentStreak
         totalScore: user.totalScore,
         accuracyRate: user.questionsAnswered > 0 
@@ -722,7 +722,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json({
         userId: user.id,
-        phoneNumber: user.phoneNumber.replace(/(\d{3})(\d{3})(\d{4})/, '$1-***-$4'),
+        phoneNumber: `****${user.phoneNumber.slice(-4)}`,
         positions: {
           totalScore: {
             rank: totalScoreRank,
