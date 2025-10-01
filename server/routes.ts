@@ -346,7 +346,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Manual question sending (for testing)
+  // Manual question sending (WORKING VERSION)
   app.post("/api/admin/send-question", async (req, res) => {
     try {
       const { phoneNumber } = req.body;
@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // FIXED: Check for pending answers using the correct method
+      // Check for pending answers
       const pendingAnswers = await storage.getPendingUserAnswers(user.id);
       
       if (pendingAnswers.length > 0) {
@@ -369,9 +369,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // FIXED: Send question with proper pending answer creation for any user
-      await sendQuestionToUser(user);
+      // Get a random question from database
+      const question = await storage.getRandomQuestion(['general', 'science', 'history'], []);
+      
+      if (!question) {
+        return res.status(400).json({ message: "No questions available" });
+      }
+
+      // Send SMS with proper formatting
+      await twilioService.sendDailyQuestion(
+        phoneNumber,
+        question,
+        user.questionsAnswered + 1
+      );
+      
+      // CRITICAL: Create pending answer record
+      await storage.recordAnswer({
+        userId: user.id,
+        questionId: question.id,
+        userAnswer: null, // This makes it pending
+        isCorrect: false,
+        pointsEarned: 0,
+      });
+      
+      console.log(`✅ Question sent and pending answer created for ${phoneNumber}`);
       res.json({ message: "Question sent successfully" });
+      
     } catch (error: any) {
       console.error("Send question error:", error);
       res.status(500).json({ message: "Failed to send question" });
