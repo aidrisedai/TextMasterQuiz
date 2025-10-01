@@ -360,9 +360,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "User not found" });
       }
 
-      // Check for existing pending answers before sending
-      const userAnswers = await storage.getUserAnswers(user.id, 100);
-      const pendingAnswers = userAnswers.filter(answer => answer.userAnswer === null);
+      // FIXED: Check for pending answers using the correct method
+      const pendingAnswers = await storage.getPendingUserAnswers(user.id);
       
       if (pendingAnswers.length > 0) {
         return res.status(400).json({ 
@@ -370,8 +369,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Send question immediately using same logic as welcome questions
-      await sendWelcomeQuizQuestion(user);
+      // FIXED: Send question with proper pending answer creation for any user
+      await sendQuestionToUser(user);
       res.json({ message: "Question sent successfully" });
     } catch (error: any) {
       console.error("Send question error:", error);
@@ -780,6 +779,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (scoreTestRoutes) app.use("/api/test", scoreTestRoutes);
   }
 
+  // Helper function to send question to any user (not just new signups)
+  async function sendQuestionToUser(user: any) {
+    try {
+      console.log(`🎯 Sending question to user ${user.phoneNumber}`);
+      
+      // Select category from user preferences for question
+      const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+        ? user.categoryPreferences 
+        : ['general'];
+      const category = userCategories[Math.floor(Math.random() * userCategories.length)];
+      
+      console.log(`📚 Question category: ${category}`);
+      
+      // Get user's answered questions to avoid duplicates
+      const answeredQuestionIds = await storage.getUserAnsweredQuestionIds(user.id);
+      
+      // Get a random question from their preferred category that they haven't answered
+      let question = await storage.getRandomQuestion([category], answeredQuestionIds);
+      
+      if (!question) {
+        console.log('🔄 No unused questions found in preferred category, trying any category...');
+        // Try any category as fallback
+        question = await storage.getRandomQuestion([], answeredQuestionIds);
+      }
+      
+      if (!question) {
+        console.log('🤖 No existing questions found, generating new question with AI...');
+        // Generate a new question if none available
+        const generated = await geminiService.generateQuestion(category, 'medium', []);
+        if (generated) {
+          question = await storage.createQuestion(generated);
+          console.log(`✨ Generated new question: ${question.questionText.substring(0, 50)}...`);
+        }
+      }
+
+      if (question) {
+        await storage.incrementQuestionUsage(question.id);
+        
+        // Send the question
+        await twilioService.sendDailyQuestion(
+          user.phoneNumber,
+          question,
+          user.questionsAnswered + 1
+        );
+        
+        // CRITICAL: Create a pending answer record so webhook can find it
+        await storage.recordAnswer({
+          userId: user.id,
+          questionId: question.id,
+          userAnswer: null, // This makes it pending
+          isCorrect: false, // Will be updated when user responds
+          pointsEarned: 0, // Will be updated when user responds
+        });
+        
+        console.log(`✅ Sent question to user ${user.phoneNumber} and created pending answer record`);
+        console.log(`📝 Question: "${question.questionText.substring(0, 50)}..."`);
+        console.log(`🔑 Correct answer: ${question.correctAnswer}`);
+      } else {
+        console.log('❌ No question available to send');
+        throw new Error('No questions available');
+      }
+    } catch (error) {
+      console.error('Error sending question to user:', error);
+      throw error; // Re-throw to let caller handle it
+    }
+  }
+  
   // Helper function to send welcome quiz question immediately after signup
   async function sendWelcomeQuizQuestion(user: any) {
     try {
