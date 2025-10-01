@@ -15,12 +15,27 @@ import {
   StopCircle,
   MoreHorizontal,
   Share2,
+  Menu,
+  X,
 } from "lucide-react";
 import { useToast } from "../hooks/use-toast";
 
 export default function Home() {
   const [showSignup, setShowSignup] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const { toast } = useToast();
+
+  // Close mobile menu on scroll
+  React.useEffect(() => {
+    const handleScroll = () => {
+      if (mobileMenuOpen) {
+        setMobileMenuOpen(false);
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [mobileMenuOpen]);
 
   const scrollToSignup = () => {
     const signupSection = document.getElementById("signup");
@@ -119,20 +134,102 @@ export default function Home() {
               </Button>
             </nav>
             
-            {/* Mobile Navigation */}
+            {/* Mobile Hamburger Menu */}
             <div className="md:hidden">
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={handleShare}
-                className="min-h-[44px]"
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="min-h-[44px] min-w-[44px] p-2"
+                aria-label="Toggle menu"
               >
-                <Share2 className="mr-2 h-4 w-4" />
-                Share
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
               </Button>
             </div>
           </div>
         </div>
+        
+        {/* Mobile Menu Overlay */}
+        {mobileMenuOpen && (
+          <>
+            {/* Backdrop */}
+            <div 
+              className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40"
+              onClick={() => setMobileMenuOpen(false)}
+            />
+            
+            {/* Mobile Menu */}
+            <div className="md:hidden fixed top-[73px] left-0 right-0 bg-background/95 backdrop-blur-sm border-b border-border shadow-lg z-50">
+              <nav className="px-4 py-4 space-y-1">
+                <a
+                  href="#features"
+                  className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    const element = document.getElementById("features");
+                    if (element) {
+                      const offset = 80;
+                      const elementPosition = element.offsetTop - offset;
+                      window.scrollTo({
+                        top: elementPosition,
+                        behavior: "smooth",
+                      });
+                    }
+                  }}
+                >
+                  <Target className="h-5 w-5" />
+                  <span>Features</span>
+                </a>
+                
+                <a
+                  href="#demo"
+                  className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    setMobileMenuOpen(false);
+                    const element = document.getElementById("demo");
+                    if (element) {
+                      const offset = 80;
+                      const elementPosition = element.offsetTop - offset;
+                      window.scrollTo({
+                        top: elementPosition,
+                        behavior: "smooth",
+                      });
+                    }
+                  }}
+                >
+                  <MessageCircle className="h-5 w-5" />
+                  <span>Demo</span>
+                </a>
+                
+                <a
+                  href="/leaderboard"
+                  className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors min-h-[44px]"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Trophy className="h-5 w-5" />
+                  <span>Leaderboard</span>
+                </a>
+                
+                <button
+                  onClick={() => {
+                    handleShare();
+                    setMobileMenuOpen(false);
+                  }}
+                  className="flex items-center space-x-3 px-4 py-3 text-muted-foreground hover:text-primary hover:bg-muted rounded-lg transition-colors w-full text-left min-h-[44px]"
+                >
+                  <Share2 className="h-5 w-5" />
+                  <span>Share</span>
+                </button>
+              </nav>
+            </div>
+          </>
+        )}
       </header>
 
       {/* Hero Section */}
