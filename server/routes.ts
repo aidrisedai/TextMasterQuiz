@@ -422,6 +422,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to send SMS" });
     }
   });
+  
+  // Create pending answer for testing
+  app.post("/api/test/create-pending-answer", async (req, res) => {
+    try {
+      const { phoneNumber, questionId } = req.body;
+      
+      if (!phoneNumber) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      const user = await storage.getUserByPhoneNumber(phoneNumber);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+      
+      // Use a default question ID from database if not provided
+      let qId = questionId;
+      if (!qId) {
+        const questions = await storage.getAllQuestions();
+        if (questions.length > 0) {
+          qId = questions[0].id;
+        } else {
+          return res.status(400).json({ message: "No questions available" });
+        }
+      }
+      
+      // Create pending answer record
+      await storage.recordAnswer({
+        userId: user.id,
+        questionId: qId,
+        userAnswer: null, // This makes it pending
+        isCorrect: false,
+        pointsEarned: 0,
+      });
+      
+      console.log(`✅ Created pending answer for ${phoneNumber} with question ${qId}`);
+      res.json({ 
+        message: "Pending answer created successfully",
+        userId: user.id,
+        questionId: qId
+      });
+      
+    } catch (error: any) {
+      console.error("Create pending answer error:", error);
+      res.status(500).json({ message: "Failed to create pending answer" });
+    }
+  });
 
   // Admin authentication routes
   app.get("/api/auth/status", (req, res) => {
