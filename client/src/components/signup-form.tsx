@@ -346,6 +346,9 @@ export function SignupForm() {
         </Form>
 
         <div className="text-center mt-6 space-y-2">
+          <p className="text-lg font-semibold text-foreground">
+            +1 (888) 596-2752
+          </p>
           <p className="text-sm text-muted-foreground">
             Text STOP to cancel
           </p>

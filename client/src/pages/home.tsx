@@ -248,7 +248,7 @@ export default function Home() {
               <br />
               Just reply A, B, C, or D!
               <br />
-              No App required.
+              No app required.
             </p>
           </div>
 
@@ -495,7 +495,7 @@ export default function Home() {
                     </div>
                     <div>
                       <div className="font-medium text-foreground">
-                        No App Required
+                        No app Required
                       </div>
                       <div className="text-sm text-muted-foreground">
                         Works with any phone that can receive text messages
