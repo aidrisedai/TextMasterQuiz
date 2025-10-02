@@ -189,8 +189,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       await twilioService.sendWelcome(user.phoneNumber, `${timeDisplay} (${user.timezone})`);
 
-      // Send immediate welcome quiz question to give users a taste
-      await sendWelcomeQuizQuestion(user);
+      // Wait 3 seconds before sending welcome question to avoid message confusion
+      setTimeout(async () => {
+        try {
+          await sendWelcomeQuizQuestion(user);
+        } catch (error) {
+          console.error('Failed to send welcome question:', error);
+        }
+      }, 3000);
 
       res.json({ 
         message: "Welcome to Text4Quiz! Check your phone for your welcome message and first trivia question.",
@@ -714,9 +720,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Previous question not found" });
       }
 
+      // Clean up any existing pending answers first
+      await storage.forceCleanupUserPendingAnswers(user.id);
+      
       // Resend the same question using Twilio service
       const questionNumber = user.questionsAnswered;
       await twilioService.sendDailyQuestion(phoneNumber, question, questionNumber);
+      
+      // CRITICAL: Create pending answer so user can reply
+      const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+      if (!created) {
+        console.log('⚠️ Failed to create pending answer for resent message');
+        // Try emergency cleanup and retry
+        await storage.forceCleanupUserPendingAnswers(user.id);
+        await storage.createPendingAnswerIfNone(user.id, question.id);
+      }
 
       res.json({ 
         message: "Previous message resent successfully",
@@ -919,12 +937,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       if (!question) {
-        console.log('🤖 No existing questions found, generating new question with AI...');
-        // Generate a new question if none available
-        const generated = await geminiService.generateQuestion(category, 'medium', []);
-        if (generated) {
-          question = await storage.createQuestion(generated);
-          console.log(`✨ Generated new question: ${question.questionText.substring(0, 50)}...`);
+        console.log('🤖 No existing questions found, trying to generate new question with AI...');
+        try {
+          // Generate a new question if none available
+          const generated = await geminiService.generateQuestion(category, 'medium', []);
+          if (generated) {
+            question = await storage.createQuestion(generated);
+            console.log(`✨ Generated new question: ${question.questionText.substring(0, 50)}...`);
+          }
+        } catch (error) {
+          console.log('⚠️ AI question generation failed, trying any available question...');
+          // Fallback: try to get ANY question regardless of category or previous answers
+          question = await storage.getRandomQuestion([], []);
         }
       }
 
@@ -981,12 +1005,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       let question = await storage.getRandomQuestion([welcomeCategory], []);
       
       if (!question) {
-        console.log('🤖 No existing questions found, generating new welcome question with AI...');
-        // Generate a new question if none available
-        const generated = await geminiService.generateQuestion(welcomeCategory, 'medium', []);
-        if (generated) {
-          question = await storage.createQuestion(generated);
-          console.log(`✨ Generated new welcome question: ${question.questionText.substring(0, 50)}...`);
+        console.log('🤖 No existing questions found, trying to generate new welcome question with AI...');
+        try {
+          // Generate a new question if none available
+          const generated = await geminiService.generateQuestion(welcomeCategory, 'medium', []);
+          if (generated) {
+            question = await storage.createQuestion(generated);
+            console.log(`✨ Generated new welcome question: ${question.questionText.substring(0, 50)}...`);
+          }
+        } catch (error) {
+          console.log('⚠️ AI welcome question generation failed, trying any available question...');
+          // Fallback: try to get ANY question for welcome
+          question = await storage.getRandomQuestion([], []);
         }
       }
 
@@ -1042,92 +1072,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (pendingAnswers.length === 0) {
         console.log(`❌ No pending questions found for user ${user.phoneNumber}`);
         
-        // FALLBACK: Check if user received a question recently but no pending answer was created
-        // This handles cases where test endpoints or other services sent questions without creating pending answers
-        console.log('🔄 Attempting to recover from missing pending answer...');
+        // SIMPLE RECOVERY: Send them a new question immediately
+        console.log('🔄 No pending answer found - sending new question as recovery...');
         
-        // Look for the most recent question in the database that the user hasn't answered yet
-        const allQuestions = await storage.getAllQuestions();
-        const userAnswers = await storage.getUserAnswers(user.id, 50); // Get last 50 answers
-        const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
-        
-        // Find a suitable fallback question (preferably from their recent category)
-        const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
-          ? user.categoryPreferences 
-          : ['general'];
-        
-        let fallbackQuestion = null;
-        
-        // Try to find an unanswered question from their preferred categories
-        for (const category of userCategories) {
-          const categoryQuestions = allQuestions.filter(q => 
-            q.category === category && 
-            !answeredQuestionIds.includes(q.id)
-          );
-          if (categoryQuestions.length > 0) {
-            fallbackQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
-            break;
-          }
-        }
-        
-        // If no category-specific question found, try any unanswered question
-        if (!fallbackQuestion) {
-          const unansweredQuestions = allQuestions.filter(q => !answeredQuestionIds.includes(q.id));
-          if (unansweredQuestions.length > 0) {
-            fallbackQuestion = unansweredQuestions[Math.floor(Math.random() * unansweredQuestions.length)];
-          }
-        }
-        
-        if (fallbackQuestion) {
-          console.log(`⚙️ Creating recovery pending answer for question ${fallbackQuestion.id}`);
+        try {
+          // Get a random question they haven't answered
+          const userAnswers = await storage.getUserAnswers(user.id, 100);
+          const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
+          const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+            ? user.categoryPreferences 
+            : ['general'];
           
-          // Create a pending answer record for this fallback question
-          const created = await storage.createPendingAnswerIfNone(user.id, fallbackQuestion.id);
+          let recoveryQuestion = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
           
-          if (created) {
-            console.log(`✅ Recovery successful - created pending answer for question ${fallbackQuestion.id}`);
-            // Process the answer with the fallback question
-            const isCorrect = fallbackQuestion.correctAnswer.toUpperCase() === answer.toUpperCase();
-            const currentStats = await storage.getUserStats(user.id);
-            const pointsEarned = calculatePoints(isCorrect, currentStats.winningStreak, currentStats.playStreak);
+          if (!recoveryQuestion) {
+            // Try any question
+            recoveryQuestion = await storage.getRandomQuestion([], answeredQuestionIds);
+          }
+          
+          if (recoveryQuestion) {
+            // Send them a fresh question
+            await twilioService.sendDailyQuestion(
+              phoneNumber, 
+              recoveryQuestion, 
+              user.questionsAnswered + 1
+            );
             
-            // Find the pending answer we just created
-            const newPendingAnswers = await storage.getPendingUserAnswers(user.id);
-            const pendingAnswer = newPendingAnswers.find(pa => pa.questionId === fallbackQuestion.id);
+            // Create pending answer
+            const created = await storage.createPendingAnswerIfNone(user.id, recoveryQuestion.id);
             
-            if (pendingAnswer) {
-              // Update the pending answer
-              await storage.updateAnswer(pendingAnswer.id, {
-                userAnswer: answer,
-                isCorrect,
-                pointsEarned,
+            if (created) {
+              await twilioService.sendSMS({
+                to: phoneNumber,
+                body: "I sent you a fresh question! Please answer it above. 🚀"
               });
-              
-              // Get updated stats and send feedback
-              const stats = await storage.getUserStats(user.id);
-              const scoreBreakdown = getPointsBreakdown(isCorrect, stats.winningStreak, stats.playStreak);
-              
-              await twilioService.sendAnswerFeedback(
-                phoneNumber,
-                isCorrect,
-                fallbackQuestion.correctAnswer,
-                fallbackQuestion.explanation,
-                stats.winningStreak,
-                pointsEarned,
-                scoreBreakdown.message
-              );
-              
-              console.log(`🎆 Recovery complete - processed answer and sent feedback`);
+              console.log(`✅ Recovery successful - sent new question ${recoveryQuestion.id}`);
               return;
             }
           }
+        } catch (error) {
+          console.log('⚠️ Recovery question failed:', error);
         }
         
-        // If all recovery attempts failed, send the original "no recent question" message
-        console.log(`⚠️ Recovery failed - no suitable fallback question found`);
+        // Final fallback message
         await twilioService.sendSMS({
           to: phoneNumber,
-          body: "No recent question found. Please wait for your next daily question."
+          body: "No recent question found. Please wait for your next daily question or text HELP for commands."
         });
         return;
       }
