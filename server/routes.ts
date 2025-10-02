@@ -349,55 +349,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Manual question sending (WORKING VERSION)
   app.post("/api/admin/send-question", async (req, res) => {
     try {
+      console.log('🎯 Send question endpoint called with:', req.body);
       const { phoneNumber } = req.body;
       
       if (!phoneNumber) {
+        console.log('❌ No phone number provided');
         return res.status(400).json({ message: "Phone number is required" });
       }
 
+      console.log(`📞 Looking up user: ${phoneNumber}`);
       const user = await storage.getUserByPhoneNumber(phoneNumber);
       if (!user) {
+        console.log('❌ User not found in database');
         return res.status(404).json({ message: "User not found" });
       }
+      console.log(`✅ User found: ID ${user.id}, Questions: ${user.questionsAnswered}`);
 
       // Check for pending answers
+      console.log('🔍 Checking for pending answers...');
       const pendingAnswers = await storage.getPendingUserAnswers(user.id);
+      console.log(`📋 Found ${pendingAnswers.length} pending answers`);
       
       if (pendingAnswers.length > 0) {
+        console.log('⚠️ User has pending answers, blocking new question');
         return res.status(400).json({ 
           message: `User has ${pendingAnswers.length} pending answer(s). Cannot send duplicate question.` 
         });
       }
 
       // Get a random question from database
+      console.log('🎲 Getting random question...');
       const question = await storage.getRandomQuestion(['general', 'science', 'history'], []);
       
       if (!question) {
+        console.log('❌ No questions available in database');
         return res.status(400).json({ message: "No questions available" });
       }
+      console.log(`✅ Question selected: ID ${question.id}, Category: ${question.category}`);
 
       // Send SMS with proper formatting
+      console.log('📱 Sending SMS...');
       await twilioService.sendDailyQuestion(
         phoneNumber,
         question,
         user.questionsAnswered + 1
       );
+      console.log('✅ SMS sent successfully');
       
       // CRITICAL: Create pending answer record
-      await storage.recordAnswer({
+      console.log('💾 Creating pending answer record...');
+      const answerRecord = {
         userId: user.id,
         questionId: question.id,
         userAnswer: null, // This makes it pending
         isCorrect: false,
         pointsEarned: 0,
+      };
+      console.log('Creating answer with data:', answerRecord);
+      
+      const recordResult = await storage.recordAnswer(answerRecord);
+      console.log('✅ Pending answer created successfully:', recordResult);
+      
+      console.log(`🎉 Question sent and pending answer created for ${phoneNumber}`);
+      res.json({ 
+        message: "Question sent successfully",
+        details: {
+          userId: user.id,
+          questionId: question.id,
+          category: question.category
+        }
       });
       
-      console.log(`✅ Question sent and pending answer created for ${phoneNumber}`);
-      res.json({ message: "Question sent successfully" });
-      
     } catch (error: any) {
-      console.error("Send question error:", error);
-      res.status(500).json({ message: "Failed to send question" });
+      console.error("❌ Send question error:", error);
+      console.error("Error name:", error.name);
+      console.error("Error message:", error.message);
+      console.error("Error stack:", error.stack);
+      res.status(500).json({ 
+        message: "Failed to send question",
+        error: error.message
+      });
     }
   });
 
