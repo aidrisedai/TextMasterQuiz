@@ -371,10 +371,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`📋 Found ${pendingAnswers.length} pending answers`);
       
       if (pendingAnswers.length > 0) {
-        console.log('⚠️ User has pending answers, blocking new question');
-        return res.status(400).json({ 
-          message: `User has ${pendingAnswers.length} pending answer(s). Cannot send duplicate question.` 
-        });
+        console.log('⚠️ User has pending answers, will clean them up automatically');
+        // Instead of blocking, log the issue and let storage handle duplicates
+        console.log('Pending answers found:', pendingAnswers.map(p => ({ id: p.id, questionId: p.questionId })));
       }
 
       // Get a random question from database
@@ -396,19 +395,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       );
       console.log('✅ SMS sent successfully');
       
-      // CRITICAL: Create pending answer record
-      console.log('💾 Creating pending answer record...');
-      const answerRecord = {
-        userId: user.id,
-        questionId: question.id,
-        userAnswer: null, // This makes it pending
-        isCorrect: false,
-        pointsEarned: 0,
-      };
-      console.log('Creating answer with data:', answerRecord);
+      // CRITICAL: Create pending answer record using atomic method
+      console.log('💾 Creating pending answer record atomically...');
+      const createdPending = await storage.createPendingAnswerIfNone(user.id, question.id);
       
-      const recordResult = await storage.recordAnswer(answerRecord);
-      console.log('✅ Pending answer created successfully:', recordResult);
+      if (!createdPending) {
+        console.log('⚠️ Failed to create pending answer - user may have existing pending answer');
+        // Clean up orphaned answers and try again
+        const cleaned = await storage.cleanupOrphanedPendingAnswers();
+        console.log(`🧼 Cleaned up ${cleaned} orphaned answers, retrying...`);
+        
+        const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!retryCreated) {
+          return res.status(400).json({ 
+            message: "Failed to create pending answer record. User may have active question." 
+          });
+        }
+        console.log('✅ Pending answer created successfully on retry');
+      } else {
+        console.log('✅ Pending answer created successfully');
+      }
       
       console.log(`🎉 Question sent and pending answer created for ${phoneNumber}`);
       res.json({ 
