@@ -118,17 +118,17 @@ export class DatabaseDeliveryService {
 
       // Format message with length optimization (existing logic)
       const questionNumber = user.questionsAnswered + 1;
-      let message = `🧠 Q#${questionNumber}: ${question.questionText}\\n\\n` +
-        `A) ${question.optionA}\\n` +
-        `B) ${question.optionB}\\n` +
-        `C) ${question.optionC}\\n` +
-        `D) ${question.optionD}\\n\\n` +
+      let message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
+        `A) ${question.optionA}\n` +
+        `B) ${question.optionB}\n` +
+        `C) ${question.optionC}\n` +
+        `D) ${question.optionD}\n\n` +
         `Reply A, B, C, or D`;
 
       // If message is too long, try shorter format (existing logic)
       if (message.length > 1400) {
-        message = `🧠 Q#${questionNumber}: ${question.questionText}\\n\\n` +
-          `A)${question.optionA}\\nB)${question.optionB}\\nC)${question.optionC}\\nD)${question.optionD}\\n\\nReply A/B/C/D`;
+        message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
+          `A)${question.optionA}\nB)${question.optionB}\nC)${question.optionC}\nD)${question.optionD}\n\nReply A/B/C/D`;
       }
 
       // Check SMS health before sending (existing logic)
