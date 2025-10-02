@@ -199,18 +199,29 @@ Reply A/B/C/D`;
       if (smsSuccess) {
         smsHealthMonitor.recordSuccess();
         
+        // PROACTIVE CLEANUP: Clean orphaned answers before creating new ones
+        console.log(`🧼 Running proactive cleanup before creating pending answer...`);
+        const cleaned = await storage.cleanupOrphanedPendingAnswers();
+        if (cleaned > 0) {
+          console.log(`🧼 Proactively cleaned up ${cleaned} orphaned answers`);
+        }
+        
         // Create pending answer record using atomic method
         const created = await storage.createPendingAnswerIfNone(user.id, question.id);
         if (!created) {
-          console.log('⚠️ Failed to create pending answer in delivery service - cleaning up');
-          const cleaned = await storage.cleanupOrphanedPendingAnswers();
-          console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+          console.log('⚠️ Failed to create pending answer - attempting emergency cleanup for this user');
           
-          // Single attempt policy - mark as failed if still can't create
+          // Emergency: Force cleanup ALL pending answers for this specific user
+          const forceCleaned = await storage.forceCleanupUserPendingAnswers(user.id);
+          console.log(`🚑 Emergency cleaned up ${forceCleaned} pending answers for user ${user.id}`);
+          
+          // Single retry after emergency cleanup
           const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
           if (!retryCreated) {
-            await storage.markDeliveryAsFailed(delivery.id, 'Failed to create pending answer record');
+            await storage.markDeliveryAsFailed(delivery.id, 'Failed to create pending answer record after emergency cleanup');
             return;
+          } else {
+            console.log(`✅ Emergency recovery successful - created pending answer after force cleanup`);
           }
         }
 

@@ -369,7 +369,28 @@ export class DatabaseStorage implements IStorage {
             isNull(userAnswers.userAnswer)
           ));
         
-        if (existing[0].count > 0) {
+        const pendingCount = existing[0].count;
+        
+        if (pendingCount > 0) {
+          // Log details about existing pending answers for debugging
+          const pendingDetails = await tx.select({
+            id: userAnswers.id,
+            questionId: userAnswers.questionId,
+            answeredAt: userAnswers.answeredAt
+          })
+          .from(userAnswers)
+          .where(and(
+            eq(userAnswers.userId, userId),
+            isNull(userAnswers.userAnswer)
+          ))
+          .limit(3);
+          
+          console.log(`⚠️ User ${userId} already has ${pendingCount} pending answers:`);
+          pendingDetails.forEach(pa => {
+            const ageMinutes = Math.round((Date.now() - new Date(pa.answeredAt).getTime()) / (1000 * 60));
+            console.log(`  - ID ${pa.id}, Question ${pa.questionId}, Age: ${ageMinutes} minutes`);
+          });
+          
           return false; // Already has pending answer
         }
         
@@ -382,10 +403,11 @@ export class DatabaseStorage implements IStorage {
           pointsEarned: 0,
         });
         
+        console.log(`✅ Created pending answer for user ${userId}, question ${questionId}`);
         return true; // Successfully created
       });
     } catch (error) {
-      console.error('Error creating pending answer:', error);
+      console.error(`❌ Error creating pending answer for user ${userId}, question ${questionId}:`, error);
       return false;
     }
   }
@@ -393,13 +415,14 @@ export class DatabaseStorage implements IStorage {
   // Cleanup orphaned pending answers (for SMS failures)
   async cleanupOrphanedPendingAnswers(): Promise<number> {
     try {
-      // More aggressive cleanup: remove pending answers older than 1 hour
+      // AGGRESSIVE cleanup: remove pending answers older than 10 minutes
+      // This prevents orphaned records from blocking new deliveries
       const result = await db.delete(userAnswers)
         .where(and(
           isNull(userAnswers.userAnswer),
-          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '1 hour'`
+          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '10 minutes'`
         ));
-      console.log(`🧼 Cleaned up ${result.rowCount || 0} orphaned pending answers older than 1 hour`);
+      console.log(`🧼 Cleaned up ${result.rowCount || 0} orphaned pending answers older than 10 minutes`);
       return result.rowCount || 0;
     } catch (error) {
       console.error('Error cleaning up orphaned pending answers:', error);
