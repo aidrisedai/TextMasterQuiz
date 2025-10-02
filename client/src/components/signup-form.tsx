@@ -107,7 +107,7 @@ export function SignupForm() {
       toast({
         title: "Welcome to Text4Quiz!",
         description:
-          "You'll receive your first question tomorrow at your preferred time.",
+          "Check your phone for your first question! Daily questions will arrive at your preferred time.",
       });
     },
     onError: (error: any) => {
@@ -141,8 +141,8 @@ export function SignupForm() {
             </div>
             <h2 className="text-2xl font-bold mb-2">Welcome to Text4Quiz!</h2>
             <p className="text-muted-foreground mb-4">
-              You're all set! You'll receive your first trivia question tomorrow
-              at your preferred time.
+              You're all set! Check your phone for your first trivia question.
+              Daily questions will arrive at your preferred time.
             </p>
             <p className="text-sm text-muted-foreground">
               Remember, you can text "HELP" anytime for commands or "STOP" to
