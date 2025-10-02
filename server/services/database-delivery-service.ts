@@ -146,14 +146,20 @@ export class DatabaseDeliveryService {
       if (smsSuccess) {
         smsHealthMonitor.recordSuccess();
         
-        // Create pending answer record (existing logic)
-        await storage.recordAnswer({
-          userId: user.id,
-          questionId: question.id,
-          userAnswer: null,
-          isCorrect: false,
-          pointsEarned: 0
-        });
+        // Create pending answer record using atomic method
+        const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!created) {
+          console.log('⚠️ Failed to create pending answer in delivery service - cleaning up');
+          const cleaned = await storage.cleanupOrphanedPendingAnswers();
+          console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+          
+          // Single attempt policy - mark as failed if still can't create
+          const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+          if (!retryCreated) {
+            await storage.markDeliveryAsFailed(delivery.id, 'Failed to create pending answer record');
+            return;
+          }
+        }
 
         // Update user's last quiz date (existing logic)
         await storage.updateUser(user.id, { 

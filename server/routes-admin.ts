@@ -874,14 +874,18 @@ router.post('/trigger-queue', async (req, res) => {
           });
           
           if (smsSuccess) {
-            // Create pending answer record
-            await storage.recordAnswer({
-              userId: user.id,
-              questionId: question.id,
-              userAnswer: null,
-              isCorrect: false,
-              pointsEarned: 0
-            });
+            // Create pending answer record using atomic method
+            const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+            if (!created) {
+              console.log('⚠️ Failed to create pending answer in queue trigger - cleaning up');
+              const cleaned = await storage.cleanupOrphanedPendingAnswers();
+              console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+              
+              const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+              if (!retryCreated) {
+                throw new Error('Failed to create pending answer record in queue trigger');
+              }
+            }
             
             // Update user's last quiz date
             await storage.updateUser(user.id, { 

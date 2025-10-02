@@ -95,8 +95,26 @@ export class TwilioService {
 
       return true;
     } catch (error: any) {
-      console.error("SMS error:", error.message);
-      console.log(`📋 Would send to ${message.to}: ${message.body}`);
+      console.error("❌ SMS error:", {
+        message: error.message,
+        code: error.code,
+        status: error.status,
+        details: error.details,
+        to: message.to,
+        from: phoneNumber,
+        bodyLength: message.body.length
+      });
+      console.log(`📋 Failed to send SMS to ${message.to}: ${message.body.substring(0, 100)}...`);
+      
+      // Check for common error codes
+      if (error.code === 21211) {
+        console.error('📞 Invalid phone number format');
+      } else if (error.code === 21401) {
+        console.error('🔑 Invalid Twilio credentials');
+      } else if (error.code === 30032) {
+        console.error('📞 Toll-free number verification required');
+      }
+      
       return false;
     }
   }

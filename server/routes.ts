@@ -485,14 +485,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Create pending answer record
-      await storage.recordAnswer({
-        userId: user.id,
-        questionId: qId,
-        userAnswer: null, // This makes it pending
-        isCorrect: false,
-        pointsEarned: 0,
-      });
+      // Create pending answer record using atomic method
+      const created = await storage.createPendingAnswerIfNone(user.id, qId);
+      
+      if (!created) {
+        // Clean up orphaned answers and try again
+        const cleaned = await storage.cleanupOrphanedPendingAnswers();
+        console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+        
+        const retryCreated = await storage.createPendingAnswerIfNone(user.id, qId);
+        if (!retryCreated) {
+          return res.status(400).json({ 
+            message: "User already has pending answer. Cannot create duplicate." 
+          });
+        }
+      }
       
       console.log(`✅ Created pending answer for ${phoneNumber} with question ${qId}`);
       res.json({ 
@@ -931,14 +938,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           user.questionsAnswered + 1
         );
         
-        // CRITICAL: Create a pending answer record so webhook can find it
-        await storage.recordAnswer({
-          userId: user.id,
-          questionId: question.id,
-          userAnswer: null, // This makes it pending
-          isCorrect: false, // Will be updated when user responds
-          pointsEarned: 0, // Will be updated when user responds
-        });
+        // CRITICAL: Create a pending answer record so webhook can find it (using atomic method)
+        const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!created) {
+          console.log('⚠️ Failed to create pending answer - cleaning up orphaned records');
+          const cleaned = await storage.cleanupOrphanedPendingAnswers();
+          console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+          
+          const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+          if (!retryCreated) {
+            throw new Error('Failed to create pending answer record after cleanup');
+          }
+        }
         
         console.log(`✅ Sent question to user ${user.phoneNumber} and created pending answer record`);
         console.log(`📝 Question: "${question.questionText.substring(0, 50)}..."`);
@@ -989,14 +1000,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           1
         );
         
-        // Create a pending answer record
-        await storage.recordAnswer({
-          userId: user.id,
-          questionId: question.id,
-          userAnswer: null, // Will be filled when user responds
-          isCorrect: false, // Will be updated when user responds
-          pointsEarned: 0, // Will be updated when user responds
-        });
+        // Create a pending answer record (using atomic method)
+        const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!created) {
+          console.log('⚠️ Failed to create pending answer for welcome question - cleaning up');
+          const cleaned = await storage.cleanupOrphanedPendingAnswers();
+          console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+          
+          // Don't throw error for welcome questions to avoid breaking signup
+          const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+          if (!retryCreated) {
+            console.log('❌ Could not create pending answer for welcome question');
+          }
+        }
         
         // Set lastQuizDate to today so scheduler won't send another question today
         // But scheduled delivery will start tomorrow

@@ -173,14 +173,19 @@ export class PrecisionSchedulerService {
       if (smsSuccess) {
         smsHealthMonitor.recordSuccess();
         
-        // Create pending answer record
-        await storage.recordAnswer({
-          userId: user.id,
-          questionId: question.id,
-          userAnswer: null,
-          isCorrect: false,
-          pointsEarned: 0
-        });
+        // Create pending answer record using atomic method
+        const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!created) {
+          console.log('⚠️ Failed to create pending answer - cleaning up orphaned records');
+          const cleaned = await storage.cleanupOrphanedPendingAnswers();
+          console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+          
+          // Single attempt policy - don't retry if still failing
+          const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+          if (!retryCreated) {
+            throw new Error('Failed to create pending answer record');
+          }
+        }
 
         // Update user's last quiz date
         await storage.updateUser(user.id, { 
@@ -284,14 +289,18 @@ export class PrecisionSchedulerService {
     if (smsSuccess) {
       smsHealthMonitor.recordSuccess();
       
-      // Create pending answer record
-      await storage.recordAnswer({
-        userId: user.id,
-        questionId: question.id,
-        userAnswer: null,
-        isCorrect: false,
-        pointsEarned: 0
-      });
+      // Create pending answer record using atomic method
+      const created = await storage.createPendingAnswerIfNone(user.id, question.id);
+      if (!created) {
+        console.log('⚠️ Failed to create pending answer for manual question - cleaning up');
+        const cleaned = await storage.cleanupOrphanedPendingAnswers();
+        console.log(`🧼 Cleaned up ${cleaned} orphaned answers`);
+        
+        const retryCreated = await storage.createPendingAnswerIfNone(user.id, question.id);
+        if (!retryCreated) {
+          throw new Error('Failed to create pending answer record for manual question');
+        }
+      }
       
       // Update user's last quiz date
       await storage.updateUser(user.id, { 

@@ -39,6 +39,7 @@ export interface IStorage {
   getPendingAnswersCount(userId: number): Promise<number>;
   createPendingAnswerIfNone(userId: number, questionId: number): Promise<boolean>;
   cleanupOrphanedPendingAnswers(): Promise<number>;
+  forceCleanupUserPendingAnswers(userId: number): Promise<number>;
   
   // Generation queue methods
   createGenerationJob(job: InsertGenerationJob): Promise<GenerationJob>;
@@ -392,14 +393,32 @@ export class DatabaseStorage implements IStorage {
   // Cleanup orphaned pending answers (for SMS failures)
   async cleanupOrphanedPendingAnswers(): Promise<number> {
     try {
+      // More aggressive cleanup: remove pending answers older than 1 hour
       const result = await db.delete(userAnswers)
         .where(and(
           isNull(userAnswers.userAnswer),
-          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '24 hours'`
+          sql`${userAnswers.answeredAt} < NOW() - INTERVAL '1 hour'`
         ));
+      console.log(`🧼 Cleaned up ${result.rowCount || 0} orphaned pending answers older than 1 hour`);
       return result.rowCount || 0;
     } catch (error) {
       console.error('Error cleaning up orphaned pending answers:', error);
+      return 0;
+    }
+  }
+
+  // Emergency cleanup: remove ALL pending answers for a user (use with caution)
+  async forceCleanupUserPendingAnswers(userId: number): Promise<number> {
+    try {
+      const result = await db.delete(userAnswers)
+        .where(and(
+          eq(userAnswers.userId, userId),
+          isNull(userAnswers.userAnswer)
+        ));
+      console.log(`⚠️ Force cleaned up ${result.rowCount || 0} pending answers for user ${userId}`);
+      return result.rowCount || 0;
+    } catch (error) {
+      console.error('Error force cleaning pending answers:', error);
       return 0;
     }
   }
