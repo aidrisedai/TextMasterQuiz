@@ -1,6 +1,7 @@
 import { users, questions, userAnswers, adminUsers, generationJobs, broadcasts, broadcastDeliveries, deliveryQueue, type User, type InsertUser, type Question, type InsertQuestion, type UserAnswer, type InsertUserAnswer, type AdminUser, type InsertAdminUser, type GenerationJob, type InsertGenerationJob, type Broadcast, type InsertBroadcast, type BroadcastDelivery, type InsertBroadcastDelivery, type DeliveryQueue, type InsertDeliveryQueue } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, gte, lt, isNull, lte, inArray, notInArray } from "drizzle-orm";
+import { randomUUID } from "crypto";
 
 export interface IStorage {
   // User methods
@@ -18,7 +19,7 @@ export interface IStorage {
   
   // Answer methods
   recordAnswer(answer: InsertUserAnswer): Promise<UserAnswer>;
-  updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined>;
+  updateAnswer(answerId: string, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined>;
   getUserAnswers(userId: number, limit?: number): Promise<(UserAnswer & { question: Question })[]>;
   getPendingUserAnswers(userId: number): Promise<(UserAnswer & { question: Question })[]>;
   
@@ -170,9 +171,15 @@ export class DatabaseStorage implements IStorage {
   }
 
   async recordAnswer(insertAnswer: InsertUserAnswer): Promise<UserAnswer> {
+    // Generate UUID for new answer
+    const answerWithId = {
+      id: randomUUID(),
+      ...insertAnswer
+    };
+    
     const [answer] = await db
       .insert(userAnswers)
-      .values(insertAnswer)
+      .values(answerWithId)
       .returning();
     
     // Only update user stats if this is a completed answer (not a pending one)
@@ -216,7 +223,7 @@ export class DatabaseStorage implements IStorage {
     return answer;
   }
 
-  async updateAnswer(answerId: number, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined> {
+  async updateAnswer(answerId: string, updates: Partial<UserAnswer>): Promise<UserAnswer | undefined> {
     const [answer] = await db
       .update(userAnswers)
       .set(updates)
@@ -394,8 +401,10 @@ export class DatabaseStorage implements IStorage {
           return false; // Already has pending answer
         }
         
-        // Atomically create pending answer
+        // Atomically create pending answer with manual UUID generation
+        const newUUID = randomUUID();
         await tx.insert(userAnswers).values({
+          id: newUUID,
           userId,
           questionId,
           userAnswer: null,

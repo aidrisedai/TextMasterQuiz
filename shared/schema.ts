@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, uuid } from "drizzle-orm/pg-core";
 import { relations } from "drizzle-orm";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
@@ -40,7 +40,7 @@ export const questions = pgTable("questions", {
 });
 
 export const userAnswers = pgTable("user_answers", {
-  id: serial("id").primaryKey(),
+  id: uuid("id").primaryKey().defaultRandom(),
   userId: integer("user_id").notNull().references(() => users.id),
   questionId: integer("question_id").notNull().references(() => questions.id),
   userAnswer: text("user_answer"), // Allow null for pending answers
