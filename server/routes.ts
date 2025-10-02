@@ -1041,6 +1041,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       if (pendingAnswers.length === 0) {
         console.log(`❌ No pending questions found for user ${user.phoneNumber}`);
+        
+        // FALLBACK: Check if user received a question recently but no pending answer was created
+        // This handles cases where test endpoints or other services sent questions without creating pending answers
+        console.log('🔄 Attempting to recover from missing pending answer...');
+        
+        // Look for the most recent question in the database that the user hasn't answered yet
+        const allQuestions = await storage.getAllQuestions();
+        const userAnswers = await storage.getUserAnswers(user.id, 50); // Get last 50 answers
+        const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
+        
+        // Find a suitable fallback question (preferably from their recent category)
+        const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
+          ? user.categoryPreferences 
+          : ['general'];
+        
+        let fallbackQuestion = null;
+        
+        // Try to find an unanswered question from their preferred categories
+        for (const category of userCategories) {
+          const categoryQuestions = allQuestions.filter(q => 
+            q.category === category && 
+            !answeredQuestionIds.includes(q.id)
+          );
+          if (categoryQuestions.length > 0) {
+            fallbackQuestion = categoryQuestions[Math.floor(Math.random() * categoryQuestions.length)];
+            break;
+          }
+        }
+        
+        // If no category-specific question found, try any unanswered question
+        if (!fallbackQuestion) {
+          const unansweredQuestions = allQuestions.filter(q => !answeredQuestionIds.includes(q.id));
+          if (unansweredQuestions.length > 0) {
+            fallbackQuestion = unansweredQuestions[Math.floor(Math.random() * unansweredQuestions.length)];
+          }
+        }
+        
+        if (fallbackQuestion) {
+          console.log(`⚙️ Creating recovery pending answer for question ${fallbackQuestion.id}`);
+          
+          // Create a pending answer record for this fallback question
+          const created = await storage.createPendingAnswerIfNone(user.id, fallbackQuestion.id);
+          
+          if (created) {
+            console.log(`✅ Recovery successful - created pending answer for question ${fallbackQuestion.id}`);
+            // Process the answer with the fallback question
+            const isCorrect = fallbackQuestion.correctAnswer.toUpperCase() === answer.toUpperCase();
+            const currentStats = await storage.getUserStats(user.id);
+            const pointsEarned = calculatePoints(isCorrect, currentStats.winningStreak, currentStats.playStreak);
+            
+            // Find the pending answer we just created
+            const newPendingAnswers = await storage.getPendingUserAnswers(user.id);
+            const pendingAnswer = newPendingAnswers.find(pa => pa.questionId === fallbackQuestion.id);
+            
+            if (pendingAnswer) {
+              // Update the pending answer
+              await storage.updateAnswer(pendingAnswer.id, {
+                userAnswer: answer,
+                isCorrect,
+                pointsEarned,
+              });
+              
+              // Get updated stats and send feedback
+              const stats = await storage.getUserStats(user.id);
+              const scoreBreakdown = getPointsBreakdown(isCorrect, stats.winningStreak, stats.playStreak);
+              
+              await twilioService.sendAnswerFeedback(
+                phoneNumber,
+                isCorrect,
+                fallbackQuestion.correctAnswer,
+                fallbackQuestion.explanation,
+                stats.winningStreak,
+                pointsEarned,
+                scoreBreakdown.message
+              );
+              
+              console.log(`🎆 Recovery complete - processed answer and sent feedback`);
+              return;
+            }
+          }
+        }
+        
+        // If all recovery attempts failed, send the original "no recent question" message
+        console.log(`⚠️ Recovery failed - no suitable fallback question found`);
         await twilioService.sendSMS({
           to: phoneNumber,
           body: "No recent question found. Please wait for your next daily question."

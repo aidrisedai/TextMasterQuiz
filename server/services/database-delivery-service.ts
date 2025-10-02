@@ -21,13 +21,52 @@ export class DatabaseDeliveryService {
   }
 
   private startPolling() {
-    // Run initial check immediately
-    this.processDeliveries();
+    // Calculate time until next quarter hour (0, 15, 30, 45 minutes)
+    const now = new Date();
+    const currentMinute = now.getMinutes();
+    const currentSecond = now.getSeconds();
     
-    // Then poll every 15 minutes
-    this.intervalId = setInterval(async () => {
-      await this.processDeliveries();
-    }, this.POLLING_INTERVAL);
+    // Find next quarter hour
+    let nextQuarterMinute;
+    if (currentMinute < 15) {
+      nextQuarterMinute = 15;
+    } else if (currentMinute < 30) {
+      nextQuarterMinute = 30;
+    } else if (currentMinute < 45) {
+      nextQuarterMinute = 45;
+    } else {
+      nextQuarterMinute = 60; // Next hour at 0 minutes
+    }
+    
+    // Calculate milliseconds until next quarter hour
+    let msUntilNextQuarter;
+    if (nextQuarterMinute === 60) {
+      // Next hour
+      msUntilNextQuarter = (60 - currentMinute) * 60 * 1000 - currentSecond * 1000;
+    } else {
+      // Within current hour
+      msUntilNextQuarter = (nextQuarterMinute - currentMinute) * 60 * 1000 - currentSecond * 1000;
+    }
+    
+    console.log(`⏰ Aligning to quarter-hour schedule. Next run in ${Math.ceil(msUntilNextQuarter / 1000)} seconds at :${nextQuarterMinute % 60} minutes`);
+    
+    // Run initial check immediately if we're close to a quarter hour (within 2 minutes)
+    if (msUntilNextQuarter > 2 * 60 * 1000) {
+      console.log('🔍 Running initial delivery check...');
+      this.processDeliveries();
+    }
+    
+    // Schedule first aligned run
+    setTimeout(() => {
+      console.log('🎯 Starting aligned quarter-hour polling');
+      this.processDeliveries();
+      
+      // Then poll every 15 minutes on the quarter hour
+      this.intervalId = setInterval(async () => {
+        await this.processDeliveries();
+      }, this.POLLING_INTERVAL);
+      
+    }, msUntilNextQuarter);
   }
 
   private async processDeliveries() {
@@ -118,17 +157,31 @@ export class DatabaseDeliveryService {
 
       // Format message with length optimization (existing logic)
       const questionNumber = user.questionsAnswered + 1;
-      let message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
-        `A) ${question.optionA}\n` +
-        `B) ${question.optionB}\n` +
-        `C) ${question.optionC}\n` +
-        `D) ${question.optionD}\n\n` +
+      let message = `🧠 Q#${questionNumber}: ${question.questionText}
+
+` +
+        `A) ${question.optionA}
+` +
+        `B) ${question.optionB}
+` +
+        `C) ${question.optionC}
+` +
+        `D) ${question.optionD}
+
+` +
         `Reply A, B, C, or D`;
 
       // If message is too long, try shorter format (existing logic)
       if (message.length > 1400) {
-        message = `🧠 Q#${questionNumber}: ${question.questionText}\n\n` +
-          `A)${question.optionA}\nB)${question.optionB}\nC)${question.optionC}\nD)${question.optionD}\n\nReply A/B/C/D`;
+        message = `🧠 Q#${questionNumber}: ${question.questionText}
+
+` +
+          `A)${question.optionA}
+B)${question.optionB}
+C)${question.optionC}
+D)${question.optionD}
+
+Reply A/B/C/D`;
       }
 
       // Check SMS health before sending (existing logic)
