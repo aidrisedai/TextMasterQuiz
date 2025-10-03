@@ -1160,18 +1160,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get updated stats (after the streak updates in storage)
       const stats = await storage.getUserStats(user.id);
       
-      // Get the enhanced scoring message with breakdown using dual streaks
-      const scoreBreakdown = getPointsBreakdown(isCorrect, stats.winningStreak, stats.playStreak);
-
-      // Send feedback with actual question data and enhanced scoring
+      // Send feedback with simple scoring (no detailed breakdown in SMS)
       await twilioService.sendAnswerFeedback(
         phoneNumber,
         isCorrect,
         question.correctAnswer,
         question.explanation,
         stats.winningStreak, // Use winning streak for traditional streak messaging
-        pointsEarned,
-        scoreBreakdown.message
+        pointsEarned
+        // No scoreMessage parameter = uses simple "Score: +X points" format
       );
       
       console.log(`📤 Sent feedback to ${user.phoneNumber}: ${isCorrect ? 'Correct' : 'Incorrect'}`);
