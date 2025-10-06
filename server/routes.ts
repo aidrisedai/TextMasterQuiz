@@ -1072,53 +1072,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (pendingAnswers.length === 0) {
         console.log(`❌ No pending questions found for user ${user.phoneNumber}`);
         
-        // SIMPLE RECOVERY: Send them a new question immediately
-        console.log('🔄 No pending answer found - sending new question as recovery...');
-        
+        // Instead of recovery, check their most recent question
         try {
-          // Get a random question they haven't answered
-          const userAnswers = await storage.getUserAnswers(user.id, 100);
-          const answeredQuestionIds = userAnswers.map(answer => answer.questionId);
-          const userCategories = user.categoryPreferences && user.categoryPreferences.length > 0 
-            ? user.categoryPreferences 
-            : ['general'];
+          const recentAnswers = await storage.getUserAnswers(user.id, 1);
           
-          let recoveryQuestion = await storage.getRandomQuestion(userCategories, answeredQuestionIds);
-          
-          if (!recoveryQuestion) {
-            // Try any question
-            recoveryQuestion = await storage.getRandomQuestion([], answeredQuestionIds);
-          }
-          
-          if (recoveryQuestion) {
-            // Send them a fresh question
-            await twilioService.sendDailyQuestion(
-              phoneNumber, 
-              recoveryQuestion, 
-              user.questionsAnswered + 1
-            );
+          if (recentAnswers.length > 0) {
+            const lastAnswer = recentAnswers[0];
+            const hoursSinceQuestion = (Date.now() - new Date(lastAnswer.answeredAt || lastAnswer.createdAt).getTime()) / (1000 * 60 * 60);
             
-            // Create pending answer
-            const created = await storage.createPendingAnswerIfNone(user.id, recoveryQuestion.id);
-            
-            if (created) {
-              await twilioService.sendSMS({
-                to: phoneNumber,
-                body: "I sent you a fresh question! Please answer it above. 🚀"
-              });
-              console.log(`✅ Recovery successful - sent new question ${recoveryQuestion.id}`);
-              return;
+            if (hoursSinceQuestion < 2) {
+              // Recent question - let them answer late
+              console.log('📝 Allowing late answer to recent question');
+              
+              // Create a new pending answer for their recent question
+              const created = await storage.createPendingAnswerIfNone(user.id, lastAnswer.questionId);
+              if (created) {
+                // Process their answer against the recent question
+                await processAnswer(user, answer, phoneNumber);
+                return;
+              }
             }
+            
+            // Question too old or couldn't create pending answer
+            await twilioService.sendSMS({
+              to: phoneNumber,
+              body: "Thanks for your response! That question has expired. You'll get your next daily question at your scheduled time, or text HELP for commands."
+            });
+          } else {
+            // No recent questions at all
+            await twilioService.sendSMS({
+              to: phoneNumber,
+              body: "No recent question found. You'll receive your next daily question at your scheduled time, or text HELP for commands."
+            });
           }
         } catch (error) {
-          console.log('⚠️ Recovery question failed:', error);
+          console.log('⚠️ Error checking recent questions:', error);
+          await twilioService.sendSMS({
+            to: phoneNumber,
+            body: "Thanks for your response! Text HELP for available commands or wait for your next daily question."
+          });
         }
         
-        // Final fallback message
-        await twilioService.sendSMS({
-          to: phoneNumber,
-          body: "No recent question found. Please wait for your next daily question or text HELP for commands."
-        });
         return;
       }
       
