@@ -8,6 +8,8 @@ import Home from "./pages/home";
 import Dashboard from "./pages/dashboard";
 import AdminPage from "./pages/admin";
 import Leaderboard from "./components/Leaderboard";
+import Privacy from "./pages/privacy";
+import Terms from "./pages/terms";
 import NotFound from "./pages/not-found";
 
 function Router() {
@@ -17,6 +19,8 @@ function Router() {
       <Route path="/dashboard" component={Dashboard} />
       <Route path="/leaderboard" component={Leaderboard} />
       <Route path="/admin" component={AdminPage} />
+      <Route path="/privacy" component={Privacy} />
+      <Route path="/terms" component={Terms} />
       <Route component={NotFound} />
     </Switch>
   );

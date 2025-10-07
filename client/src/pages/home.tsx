@@ -806,7 +806,7 @@ export default function Home() {
                 </li>
                 <li>
                   <a
-                    href="#"
+                    href="/privacy"
                     className="hover:text-background transition-colors"
                   >
                     Privacy Policy
@@ -814,7 +814,7 @@ export default function Home() {
                 </li>
                 <li>
                   <a
-                    href="#"
+                    href="/terms"
                     className="hover:text-background transition-colors"
                   >
                     Terms of Service
